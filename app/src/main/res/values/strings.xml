@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">ProTren</string>
+    <string name="home">Strona główna</string>
+    <string name="profile">Profil</string>
+    <string name="settings">Ustawienia</string>
+
+</resources>
