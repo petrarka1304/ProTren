@@ -98,7 +98,7 @@ fun ExerciseHistoryScreen(navController: NavController, encodedName: String) {
                     items(rows) { (date, w, r) ->
                         ElevatedCard {
                             Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(if (date.isBlank()) "—" else date)
+                                Text(formatDate(date))
                                 Text("$w kg × $r", fontWeight = FontWeight.SemiBold)
                             }
                         }
@@ -108,4 +108,8 @@ fun ExerciseHistoryScreen(navController: NavController, encodedName: String) {
             }
         }
     }
+    fun formatDate(date: String?): String {
+        return date?.substring(0, 10) ?: "—"  // Zwraca tylko datę w formacie yyyy-MM-dd
+    }
+
 }

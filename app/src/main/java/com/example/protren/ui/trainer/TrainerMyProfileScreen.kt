@@ -78,8 +78,13 @@ private val TILE_RADIUS = 14.dp
  * Fallback host dla STARYCH względnych ścieżek typu "/uploads/...".
  * Przy Cloudflare R2 zwykle dostajesz signed URL (https://...), wtedy tego nie używamy.
  */
-private const val AVATAR_BASE_URL = "https://protren-backend.onrender.com/"
-
+private const val MEDIA_BASE_URL = "https://protren-backend.onrender.com"
+private fun normalizeUrl(raw: String?): String? {
+    val v = raw?.trim()
+    if (v.isNullOrBlank()) return null
+    if (v.startsWith("http://", true) || v.startsWith("https://", true)) return v
+    return MEDIA_BASE_URL.trimEnd('/') + "/" + v.trimStart('/')
+}
 /* ======================= API uploadu avatara (R2) ======================= */
 
 data class AvatarUploadResponse(
@@ -322,14 +327,9 @@ fun TrainerMyProfileScreen(
                                 }
 
                                 val avatarFullUrl = remember(t.avatarUrl, localAvatarOverrideUrl) {
-                                    val raw = localAvatarOverrideUrl ?: t.avatarUrl
-                                    when {
-                                        raw.isNullOrBlank() -> null
-                                        raw.startsWith("http", ignoreCase = true) -> raw // signed R2 / pełny URL
-                                        else -> AVATAR_BASE_URL + raw.trimStart('/')     // legacy względne ścieżki
-                                    }
+                                    // Używamy helpera z Czat, który obsługuje signed URL oraz legacy paths
+                                    normalizeUrl(localAvatarOverrideUrl ?: t.avatarUrl)
                                 }
-
                                 Box(
                                     Modifier
                                         .align(Alignment.CenterEnd)
@@ -471,25 +471,25 @@ fun TrainerMyProfileScreen(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     galleryUrls.forEach { raw ->
-                                        val fullUrl =
-                                            if (raw.startsWith("http", ignoreCase = true)) raw
-                                            else AVATAR_BASE_URL + raw.trimStart('/')
+                                        val fullUrl = normalizeUrl(raw)
 
-                                        ElevatedCard(
-                                            modifier = Modifier.size(88.dp),
-                                            shape = RoundedCornerShape(12.dp)
-                                        ) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(context)
-                                                    .data(fullUrl)
-                                                    .crossfade(true)
-                                                    .build(),
-                                                contentDescription = "Zdjęcie portfolio",
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .clip(RoundedCornerShape(12.dp))
-                                            )
+                                        if (fullUrl != null) {
+                                            ElevatedCard(
+                                                modifier = Modifier.size(88.dp),
+                                                shape = RoundedCornerShape(12.dp)
+                                            ) {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context)
+                                                        .data(fullUrl)
+                                                        .crossfade(true)
+                                                        .build(),
+                                                    contentDescription = "Zdjęcie portfolio",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                )
+                                            }
                                         }
                                     }
                                 }

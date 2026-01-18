@@ -318,6 +318,7 @@ fun ChatThreadScreen(
                         messages = messages,
                         listState = listState,
                         otherUserId = effectiveOtherUserId,
+                        otherAvatarUrl = otherAvatar,
                         authToken = authToken,
                         onImageClick = { urls, idx ->
                             nav.currentBackStackEntry
@@ -379,6 +380,7 @@ private fun MessagesList(
     messages: List<ChatMessageDto>,
     listState: LazyListState,
     otherUserId: String?,
+    otherAvatarUrl: String?,
     authToken: String?,
     onImageClick: (urls: List<String>, startIdx: Int) -> Unit,
     onVideoClick: (url: String) -> Unit,
@@ -410,6 +412,7 @@ private fun MessagesList(
                 msg = msg,
                 timeText = timeText,
                 otherUserId = otherUserId,
+                otherAvatarUrl = otherAvatarUrl,
                 authToken = authToken,
                 onImageClick = onImageClick,
                 onVideoClick = onVideoClick,
@@ -431,6 +434,7 @@ private fun MessageRow(
     msg: ChatMessageDto,
     timeText: String,
     otherUserId: String?,
+    otherAvatarUrl: String?, // <--- Nowy parametr
     authToken: String?,
     onImageClick: (urls: List<String>, startIdx: Int) -> Unit,
     onVideoClick: (url: String) -> Unit,
@@ -439,12 +443,44 @@ private fun MessageRow(
 ) {
     val mine = otherUserId != null && msg.senderId != otherUserId
 
+    // Normalizacja URL (to helper, który już masz w pliku)
+    val avatarFullUrl = remember(otherAvatarUrl) { normalizeMediaUrl(otherAvatarUrl) }
+
     Row(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 2.dp),
-        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom // Avatar wyrównany do dołu wiadomości
     ) {
+        // --- SEKCJA AVATARA (tylko dla rozmówcy) ---
+        if (!mine) {
+            if (avatarFullUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(avatarFullUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(end = 8.dp, bottom = 20.dp) // Odsunięcie od dymku i dołu
+                        .size(32.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Zaślepka, jeśli brak URL (szare kółko)
+                Box(
+                    modifier = Modifier
+                        .padding(end = 8.dp, bottom = 20.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+            }
+        }
+        // -------------------------------------------
+
         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
 
             if (!mine && !msg.senderName.isNullOrBlank()) {

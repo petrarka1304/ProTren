@@ -254,7 +254,7 @@ fun EditWorkoutScreen(
                     OutlinedTextField(
                         value = date,
                         onValueChange = { /* readOnly */ },
-                        label = { Text("Data (YYYY-MM-DD), opcjonalnie") },
+                        label = { Text("Data (YYYY-MM-DD)") },
                         readOnly = true,
                         trailingIcon = {
                             IconButton(onClick = { showDatePicker.value = true }) {

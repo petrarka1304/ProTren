@@ -287,7 +287,7 @@ fun AddWorkoutScreen(navController: NavController) {
                 OutlinedTextField(
                     value = date,
                     onValueChange = { /* readOnly */ },
-                    label = { Text("Data (YYYY-MM-DD), opcjonalnie") },
+                    label = { Text("Data (YYYY-MM-DD)") },
                     readOnly = true,
                     enabled = !isSaving,
                     trailingIcon = {

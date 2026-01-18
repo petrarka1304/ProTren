@@ -143,12 +143,6 @@ fun ProfileScreen(
                         Icon(Icons.Filled.Person, contentDescription = "Ustawienia konta")
                     }
 
-                    IconButton(
-                        onClick = { vm.calculateNow(form) },
-                        enabled = state !is ProfileUIState.Loading
-                    ) {
-                        Icon(Icons.Filled.Calculate, contentDescription = "Przelicz żywienie")
-                    }
 
                     IconButton(
                         onClick = { vm.saveProfile(form) },
@@ -259,7 +253,7 @@ fun ProfileScreen(
                             carbs = form.carbs
                         )
                         Text(
-                            "Użyj ikony kalkulatora w pasku u góry, aby przeliczyć wartości.",
+                            "Użyj ikony w pasku u góry, aby przeliczyć wartości.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

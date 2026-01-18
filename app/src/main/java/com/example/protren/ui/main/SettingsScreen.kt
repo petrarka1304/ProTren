@@ -180,16 +180,7 @@ fun SettingsScreen(
                         }
                     )
                 }
-
-                Button(
-                    onClick = {
-                        isDark = false
-                        themeController.setDark(false)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Przełącz na jasny motyw")
-                }
+                
             }
 
             // ─── Ustawienia trenera (tylko dla roli trainer) ───

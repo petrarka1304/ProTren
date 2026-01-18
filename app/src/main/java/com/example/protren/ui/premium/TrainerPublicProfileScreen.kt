@@ -482,10 +482,11 @@ private fun SectionCard(
 }
 
 private fun resolveImageUrl(raw: String?): String? {
-    if (raw.isNullOrBlank()) return null
-    return if (raw.startsWith("http", ignoreCase = true)) {
-        raw
-    } else {
-        BACKEND_BASE_URL + raw.trimStart('/')
+    val v = raw?.trim()
+    if (v.isNullOrBlank()) return null
+    if (v.startsWith("http://", true) || v.startsWith("https://", true)) {
+        return v
     }
+    // Upewnij się, że stała BACKEND_BASE_URL jest zdefiniowana w tym pliku tak samo
+    return BACKEND_BASE_URL.trimEnd('/') + "/" + v.trimStart('/')
 }

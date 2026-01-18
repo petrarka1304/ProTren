@@ -128,7 +128,7 @@ private fun Header() {
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Ustaw parametry, a my wygenerujemy plan",
+            "Ustaw parametry, a dostaniesz plan, który Cię poprowadzi!",
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

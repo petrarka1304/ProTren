@@ -399,6 +399,9 @@ private fun SortDropdown(
 }
 
 /* ───────────────────── LOGIKA ───────────────────── */
+fun formatDate(date: String?): String {
+    return date?.substring(0, 10) ?: "" // Zwraca tylko datę w formacie yyyy-MM-dd
+}
 
 private fun computePRs(logs: List<WorkoutLog>): List<PRItem> {
     val map = mutableMapOf<String, MutableList<Triple<Int, Int, String?>>>()
@@ -425,7 +428,7 @@ private fun computePRs(logs: List<WorkoutLog>): List<PRItem> {
             .maxOfOrNull { it.second } ?: 0
         val oneRm = series.maxOfOrNull { (w, r, _) -> epley1RM(w, r) } ?: 0
         val maxVolume = series.maxOfOrNull { (w, r, _) -> w * r } ?: 0
-        val lastDate = series.maxByOrNull { it.third ?: "" }?.third
+        val lastDate = formatDate(series.maxByOrNull { it.third ?: "" }?.third)
 
         PRItem(
             name = name,

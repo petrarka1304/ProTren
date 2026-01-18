@@ -8,6 +8,7 @@ package com.example.protren.ui.supplements
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -399,37 +402,63 @@ fun SupplementEditorScreen(
                                 .distinct()
                                 .sorted()
                         }
+                        var categoriesExpanded by remember { mutableStateOf(false) }
 
-                        // chipy
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        // Nagłówek do klikania
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { categoriesExpanded = !categoriesExpanded }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            AssistChip(
-                                onClick = { selectedCategory = null },
-                                label = { Text("Wszystkie") },
-                                leadingIcon = if (selectedCategory == null) {
-                                    { Icon(Icons.Filled.Check, null) }
-                                } else null,
-                                colors = if (selectedCategory == null)
-                                    AssistChipDefaults.assistChipColors(
-                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                    )
-                                else AssistChipDefaults.assistChipColors()
+                            Text(
+                                text = if (selectedCategory != null)
+                                    "Kategoria: ${selectedCategory?.replaceFirstChar { it.uppercase() }}"
+                                else "Filtruj wg kategorii",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            categories.forEach { cat ->
-                                val selected = selectedCategory == cat
+                            Icon(
+                                imageVector = if (categoriesExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = if (categoriesExpanded) "Zwiń" else "Rozwiń",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        AnimatedVisibility(visible = categoriesExpanded) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
                                 AssistChip(
-                                    onClick = {
-                                        selectedCategory = if (selected) null else cat
-                                    },
-                                    label = { Text(cat.replaceFirstChar { it.uppercase() }) },
-                                    colors = if (selected)
+                                    onClick = { selectedCategory = null },
+                                    label = { Text("Wszystkie") },
+                                    leadingIcon = if (selectedCategory == null) {
+                                        { Icon(Icons.Filled.Check, null) }
+                                    } else null,
+                                    colors = if (selectedCategory == null)
                                         AssistChipDefaults.assistChipColors(
                                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                                         )
                                     else AssistChipDefaults.assistChipColors()
                                 )
+                                categories.forEach { cat ->
+                                    val selected = selectedCategory == cat
+                                    AssistChip(
+                                        onClick = {
+                                            selectedCategory = if (selected) null else cat
+                                        },
+                                        label = { Text(cat.replaceFirstChar { it.uppercase() }) },
+                                        colors = if (selected)
+                                            AssistChipDefaults.assistChipColors(
+                                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                            )
+                                        else AssistChipDefaults.assistChipColors()
+                                    )
+                                }
                             }
                         }
 
