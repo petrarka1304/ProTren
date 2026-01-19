@@ -1,9 +1,6 @@
 package com.example.protren.navigation
 
-/**
- * Centralne definicje tras. Używaj tych stałych w całej aplikacji.
- * Jeśli masz inne nazwy/ścieżki – podmień tutaj, a reszta się zsynchronizuje.
- */
+
 object NavItem {
     const val Splash = "splash"
     const val Login = "login"
@@ -14,11 +11,9 @@ object NavItem {
     const val Analytics = "analytics"
     const val Workouts = "workouts"
     const val AddWorkout = "addWorkout"
-    const val EditWorkout = "editWorkout" // jeśli używasz parametru, dodaj w NavGraph
+    const val EditWorkout = "editWorkout"
 
-    // Suplementy
     const val SupplementsToday = "supplements/today"
     const val SupplementsManage = "supplements/manage"
-    // Edytor suplementu – wersja z opcjonalnym query param ?id={...}
     const val SupplementEditor = "supplements/editor"
 }

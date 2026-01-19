@@ -156,7 +156,6 @@ fun PersonalRecordsScreen(navController: NavController) {
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                // Panel filtrów (zwarty, nowoczesny)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -187,7 +186,6 @@ fun PersonalRecordsScreen(navController: NavController) {
                     )
                 }
 
-                // Lista / puste wyniki
                 if (filtered.isEmpty()) {
                     KompaktowyStanPustyWynikow(
                         modifier = Modifier
@@ -221,7 +219,6 @@ fun PersonalRecordsScreen(navController: NavController) {
     }
 }
 
-/* ───────────────────── UI: STANY ───────────────────── */
 
 @Composable
 private fun KompaktowyStanBledu(
@@ -270,7 +267,6 @@ private fun KompaktowyStanPustyWynikow(
     }
 }
 
-/* ───────────────────── UI: KARTA ───────────────────── */
 
 @Composable
 private fun KartaRekordu(
@@ -310,7 +306,6 @@ private fun KartaRekordu(
                 )
             }
 
-            // Nowoczesne „pigułki” z najważniejszymi metrykami
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -347,7 +342,6 @@ private fun MiniPigułka(nazwa: String, wartosc: String) {
     }
 }
 
-/* ───────────────────── SORT ───────────────────── */
 
 @Composable
 private fun SortDropdown(
@@ -398,9 +392,8 @@ private fun SortDropdown(
     }
 }
 
-/* ───────────────────── LOGIKA ───────────────────── */
 fun formatDate(date: String?): String {
-    return date?.substring(0, 10) ?: "" // Zwraca tylko datę w formacie yyyy-MM-dd
+    return date?.substring(0, 10) ?: ""
 }
 
 private fun computePRs(logs: List<WorkoutLog>): List<PRItem> {

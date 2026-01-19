@@ -36,7 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/* ======================== ZABEZPIECZENIA (limity) ======================== */
+/*limity*/
 
 private const val MAX_QUERY_LEN = 60
 private const val MAX_EXERCISE_NAME_LEN = 60
@@ -52,11 +52,10 @@ private fun sanitizeSingleLine(input: String, maxLen: Int): String {
     return collapsed.take(maxLen)
 }
 
-/* ======================== ŁADNE KATEGORIE (mapowanie) ======================== */
 
 private data class CategoryUi(
-    val key: String,      // stabilny klucz filtra (kanoniczny)
-    val label: String,    // ładna nazwa PL
+    val key: String,
+    val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
@@ -89,7 +88,6 @@ private fun categoryUiForKey(key: String): CategoryUi {
     }
 }
 
-/* ======================== FILTR: CZĘŚĆ CIAŁA ======================== */
 
 private data class BodyPartUi(
     val key: String,
@@ -97,7 +95,6 @@ private data class BodyPartUi(
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
-// mapujemy grupy do części ciała
 private fun bodyPartKeyForGroupKey(groupKey: String): String = when (groupKey) {
     "klatka", "plecy", "barki", "rece" -> "gora"
     "nogi" -> "dol"
@@ -115,8 +112,6 @@ private fun bodyPartsUi(): List<BodyPartUi> = listOf(
     BodyPartUi("inne", "Inne", Icons.Filled.Category)
 )
 
-/* ======================== MODELE ======================== */
-
 data class ExerciseUi(
     val id: String,
     val name: String,
@@ -129,7 +124,6 @@ const val EXERCISE_PICKER_RESULT_IDS = "picked_exercise_ids"
 const val EXERCISE_PICKER_RESULT_NAMES = "picked_exercise_names"
 const val EXERCISE_PICKER_PRESELECTED_IDS = "picker_preselected_ids"
 
-/* ======================== MAPOWANIE DTO -> UI ======================== */
 
 private fun ExerciseDto.toUi() = ExerciseUi(
     id = _id,
@@ -138,8 +132,6 @@ private fun ExerciseDto.toUi() = ExerciseUi(
     equipment = equipment?.takeIf { it.isNotBlank() },
     isCustom = false
 )
-
-/* ======================== EKRAN ======================== */
 
 @Composable
 fun ExercisePickerScreen(navController: NavController) {
@@ -169,7 +161,6 @@ fun ExercisePickerScreen(navController: NavController) {
     var query by rememberSaveable { mutableStateOf("") }
     var selectedCategoryKey by rememberSaveable { mutableStateOf("") }
 
-    // ✅ NOWE: filtr po części ciała
     var selectedBodyPartKey by rememberSaveable { mutableStateOf("all") }
 
     var selectedEquipment by rememberSaveable { mutableStateOf("Sprzęt: wszystkie") }
@@ -183,7 +174,6 @@ fun ExercisePickerScreen(navController: NavController) {
 
     var showUnsavedDialog by remember { mutableStateOf(false) }
 
-    // pierwsze pobranie
     LaunchedEffect(Unit) {
         reload(
             ctx = ctx,
@@ -275,7 +265,6 @@ fun ExercisePickerScreen(navController: NavController) {
         if (showUnsavedDialog) showUnsavedDialog = false else handleBack()
     }
 
-    // ✅ NOWE: wyszukiwanie po CAŁEJ bazie (pobieranie wszystkich stron gdy query != blank)
     fun triggerSearch() {
         currentPage = 1
         endReached = false
@@ -290,7 +279,6 @@ fun ExercisePickerScreen(navController: NavController) {
 
             try {
                 if (safeQuery.isNullOrBlank()) {
-                    // bez query → klasyczna paginacja
                     reload(
                         ctx = ctx,
                         page = 1,
@@ -319,13 +307,11 @@ fun ExercisePickerScreen(navController: NavController) {
                         mine = mineOnly
                     )
 
-                    // sprawdzamy czy backend realnie filtruje po nazwie (albo w ogóle zwraca match)
                     val anyMatch = fromBackend.any { it.name.contains(safeQuery, ignoreCase = true) }
 
                     val finalList = if (anyMatch) {
                         fromBackend
                     } else {
-                        // 🔥 FALLBACK: backend ignoruje query → pobierz wszystko i filtruj lokalnie
                         fetchAllExercises(
                             ctx = ctx,
                             equipment = selectedEquipment.takeIf { it != "Sprzęt: wszystkie" },
@@ -336,7 +322,6 @@ fun ExercisePickerScreen(navController: NavController) {
                     data.clear()
                     data.addAll(finalList)
 
-                    // po pełnym pobraniu nie pokazujemy "Załaduj więcej"
                     endReached = true
                     currentPage = 1
                     isLoading = false
@@ -383,7 +368,6 @@ fun ExercisePickerScreen(navController: NavController) {
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    // SZUKAJ
                     item {
                         OutlinedTextField(
                             value = query,
@@ -409,7 +393,6 @@ fun ExercisePickerScreen(navController: NavController) {
                         )
                     }
 
-                    // ✅ NOWE: CZĘŚĆ CIAŁA (ładne chipsy)
                     item {
                         Text(
                             "Część ciała",
@@ -450,10 +433,7 @@ fun ExercisePickerScreen(navController: NavController) {
                         }
                     }
 
-                    // KATEGORIE (mięśnie)
 
-
-                    // SPRZĘT + TOGGLE "TYLKO MOJE"
                     item {
                         Row(
                             Modifier
@@ -471,7 +451,6 @@ fun ExercisePickerScreen(navController: NavController) {
                                         selected = selectedEquipment == opt,
                                         onClick = {
                                             selectedEquipment = opt
-                                            // jeżeli masz wpisane query -> ponów wyszukiwanie po całej bazie
                                             if (query.trim().isNotBlank()) triggerSearch()
                                             else {
                                                 currentPage = 1
@@ -572,7 +551,6 @@ fun ExercisePickerScreen(navController: NavController) {
                             )
                         }
 
-                        // ładowanie "Załaduj więcej" zostaje tylko dla trybu bez query
                         item {
                             if (!endReached && query.trim().isBlank()) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -686,8 +664,6 @@ fun ExercisePickerScreen(navController: NavController) {
         )
     }
 }
-
-/* ======================== KOMPONENTY ======================== */
 
 @Composable
 private fun ErrorView(msg: String, onRetry: () -> Unit) {
@@ -826,8 +802,6 @@ private fun AddCustomExerciseSheet(
     }
 }
 
-/* ======================== BACKEND: zwykłe ładowanie 1 strony ======================== */
-
 private suspend fun reload(
     ctx: Context,
     page: Int,
@@ -874,8 +848,6 @@ private suspend fun reload(
     }
 }
 
-/* ======================== BACKEND: pobierz WSZYSTKIE strony dla query ======================== */
-
 private suspend fun fetchAllExercisesByQuery(
     ctx: Context,
     query: String,
@@ -892,9 +864,9 @@ private suspend fun fetchAllExercisesByQuery(
     val api = retrofit.create(ExerciseApi::class.java)
 
     val limit = 50
-    val maxPagesSafety = 40 // zabezpieczenie przed nieskończoną pętlą
+    val maxPagesSafety = 40
 
-    val all = LinkedHashMap<String, ExerciseUi>() // deduplikacja po ID, zachowuje kolejność
+    val all = LinkedHashMap<String, ExerciseUi>()
     var page = 1
 
     while (page <= maxPagesSafety) {
@@ -917,8 +889,6 @@ private suspend fun fetchAllExercisesByQuery(
         val items = body?.items?.map { it.toUi() }.orEmpty()
 
         items.forEach { all[it.id] = it }
-
-        // koniec: mniej niż limit albo pusto
         if (items.isEmpty() || items.size < limit) break
 
         page += 1
@@ -941,7 +911,7 @@ private suspend fun fetchAllExercises(
     val api = retrofit.create(ExerciseApi::class.java)
 
     val limit = 50
-    val maxPagesSafety = 80 // możesz zwiększyć jeśli masz gigant bazę
+    val maxPagesSafety = 80
 
     val all = LinkedHashMap<String, ExerciseUi>()
     var page = 1
@@ -949,7 +919,7 @@ private suspend fun fetchAllExercises(
     while (page <= maxPagesSafety) {
         val res = withContext(Dispatchers.IO) {
             api.getExercises(
-                query = null,               // <— bez query!
+                query = null,
                 group = null,
                 equipment = equipment?.let { sanitizeSingleLine(it, MAX_EQUIPMENT_LEN) },
                 page = page,

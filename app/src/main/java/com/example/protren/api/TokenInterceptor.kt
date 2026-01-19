@@ -1,4 +1,4 @@
-package com.example.protren.network
+package com.example.protren.api
 
 import okhttp3.Interceptor
 import okhttp3.Response

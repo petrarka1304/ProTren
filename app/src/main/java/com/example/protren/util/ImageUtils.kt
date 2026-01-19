@@ -14,10 +14,7 @@ import java.io.FileOutputStream
 
 object ImageUtils {
 
-    /**
-     * Wczytuje obraz z URI i kompresuje do JPG (ok. ≤ 1–2 MB).
-     * Zwraca tymczasowy plik w cache, gotowy do wysyłki jako multipart.
-     */
+
     fun prepareImageFile(
         context: Context,
         uri: Uri,
@@ -47,7 +44,6 @@ object ImageUtils {
         return tempFile
     }
 
-    /** Zwraca szerokość i wysokość obrazu (użyteczne przy podglądzie). */
     fun getImageSize(context: Context, uri: Uri): Pair<Int, Int>? {
         val input = runCatching { context.contentResolver.openInputStream(uri) }.getOrNull()
             ?: return null
@@ -56,11 +52,7 @@ object ImageUtils {
         return Pair(bmp.width, bmp.height)
     }
 
-    /**
-     * Tworzy listę partów Multipart pod nazwą "files" z listy URI.
-     *
-     * ✅ Backend: upload.array("files", 10)
-     */
+
     fun makeGalleryParts(context: Context, uris: List<Uri>): List<MultipartBody.Part> {
         if (uris.isEmpty()) return emptyList()
 
@@ -77,7 +69,7 @@ object ImageUtils {
             ) suggestedName else "$suggestedName.jpg"
 
             parts += MultipartBody.Part.createFormData(
-                /* name     = */ "files",     // ✅ MUSI być "files"
+                /* name     = */ "files",
                 /* filename = */ safeName,
                 /* body     = */ body
             )
@@ -85,7 +77,6 @@ object ImageUtils {
         return parts
     }
 
-    /** Próbuje pobrać przyjazną nazwę pliku z ContentResolver. */
     private fun resolveDisplayName(context: Context, uri: Uri): String? {
         var name: String? = null
         var cursor: Cursor? = null

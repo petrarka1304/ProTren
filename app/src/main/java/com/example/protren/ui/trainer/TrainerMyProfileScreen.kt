@@ -67,17 +67,12 @@ import retrofit2.http.Part
 import retrofit2.http.Query
 import java.io.InputStream
 
-/* ====== rozmiary ====== */
 private val HEADER_HEIGHT = 96.dp
 private val AVATAR_SIZE = 64.dp
 private val CARD_RADIUS = 20.dp
 private val CARD_INNER_PAD = 14.dp
 private val TILE_RADIUS = 14.dp
 
-/**
- * Fallback host dla STARYCH względnych ścieżek typu "/uploads/...".
- * Przy Cloudflare R2 zwykle dostajesz signed URL (https://...), wtedy tego nie używamy.
- */
 private const val MEDIA_BASE_URL = "https://protren-backend.onrender.com"
 private fun normalizeUrl(raw: String?): String? {
     val v = raw?.trim()
@@ -85,7 +80,6 @@ private fun normalizeUrl(raw: String?): String? {
     if (v.startsWith("http://", true) || v.startsWith("https://", true)) return v
     return MEDIA_BASE_URL.trimEnd('/') + "/" + v.trimStart('/')
 }
-/* ======================= API uploadu avatara (R2) ======================= */
 
 data class AvatarUploadResponse(
     val avatarKey: String? = null,
@@ -105,13 +99,11 @@ interface ProfileUploadApi {
         @Part("meta") metaJson: RequestBody? = null
     ): retrofit2.Response<AvatarUploadResponse>
 
-    // key -> signed url (Cloudflare R2 private)
     @GET("api/files/view")
     suspend fun viewFile(
         @Query("key") key: String
     ): retrofit2.Response<FileViewResponse>
 
-    // fallback: backend podpisuje avatar na GET /api/profile
     @GET("api/profile")
     suspend fun getProfile(): retrofit2.Response<UserProfile>
 }
@@ -141,8 +133,6 @@ private fun rememberProfileUploadApi(prefs: UserPreferences): ProfileUploadApi {
     return remember { retrofit.create(ProfileUploadApi::class.java) }
 }
 
-/* ======================= EKRAN PROFILU ======================= */
-
 @Composable
 fun TrainerMyProfileScreen(
     nav: NavController,
@@ -153,10 +143,7 @@ fun TrainerMyProfileScreen(
     val uploadApi = rememberProfileUploadApi(prefs)
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
-
     var uploading by remember { mutableStateOf(false) }
-
-    // lokalny "override" avatara po uploadzie (żeby UI zareagował od razu)
     var localAvatarOverrideUrl by remember { mutableStateOf<String?>(null) }
 
     val pickImage = rememberLauncherForActivityResult(
@@ -174,7 +161,6 @@ fun TrainerMyProfileScreen(
                     vm.loadMine()
                     snackbar.showSnackbar("Avatar zaktualizowany")
                 } else {
-                    // jeśli nie udało się wyciągnąć URL, i tak spróbuj odświeżyć dane
                     vm.loadMine()
                     snackbar.showSnackbar("Avatar wysłany, ale nie udało się pobrać podglądu")
                 }
@@ -259,7 +245,6 @@ fun TrainerMyProfileScreen(
                         .fillMaxSize()
                         .verticalScroll(scroll)
                 ) {
-                    /* ---------- KARTA PROFILU ---------- */
                     ElevatedCard(
                         modifier = Modifier
                             .padding(horizontal = 16.dp, vertical = 10.dp)
@@ -327,7 +312,6 @@ fun TrainerMyProfileScreen(
                                 }
 
                                 val avatarFullUrl = remember(t.avatarUrl, localAvatarOverrideUrl) {
-                                    // Używamy helpera z Czat, który obsługuje signed URL oraz legacy paths
                                     normalizeUrl(localAvatarOverrideUrl ?: t.avatarUrl)
                                 }
                                 Box(
@@ -421,7 +405,6 @@ fun TrainerMyProfileScreen(
                         }
                     }
 
-                    /* ---------- Sekcje treści ---------- */
                     ContentSection(
                         icon = Icons.Outlined.Info,
                         title = "O trenerze",
@@ -443,7 +426,6 @@ fun TrainerMyProfileScreen(
                         body = "Abonament: " + (t.priceMonth?.let { "%.0f zł/mies.".format(it) } ?: "—")
                     )
 
-                    // Portfolio trenera
                     val galleryUrls = t.galleryUrls ?: emptyList()
                     if (galleryUrls.isNotEmpty()) {
                         ElevatedCard(
@@ -503,8 +485,6 @@ fun TrainerMyProfileScreen(
         }
     }
 }
-
-/* ===================== Klocki UI ===================== */
 
 @Composable
 private fun StatTile(
@@ -614,15 +594,6 @@ private fun ErrorCard(
     }
 }
 
-/* ===================== Upload avatara – helper (R2) ===================== */
-
-/**
- * Zwraca najlepszy możliwy URL do natychmiastowego podglądu:
- * - avatarUrl jeśli backend zwróci
- * - profile.avatar jeśli jest pełnym URL
- * - viewFile(avatarKey) -> signed URL
- * - fallback: GET /api/profile i weź profile.avatar (u Ciebie backend podpisuje)
- */
 private suspend fun uploadAvatar(
     context: Context,
     api: ProfileUploadApi,
@@ -654,17 +625,12 @@ private suspend fun uploadAvatar(
 
     val r = resp.body()
 
-    // 1) bezpośredni URL (jeśli backend zwróci)
     val directUrl = r?.avatarUrl
     if (!directUrl.isNullOrBlank()) return directUrl
-
-    // 2) jeśli profil zwrócony i avatar to pełny URL
     val profAvatar = r?.profile?.avatar
     if (!profAvatar.isNullOrBlank() && profAvatar.startsWith("http", ignoreCase = true)) {
         return profAvatar
     }
-
-    // 3) jeśli mamy key -> rozwiąż przez /api/files/view
     val key = r?.avatarKey ?: (profAvatar?.takeIf { !it.startsWith("http", true) })
     if (!key.isNullOrBlank()) {
         val view = api.viewFile(key)
@@ -674,7 +640,6 @@ private suspend fun uploadAvatar(
         }
     }
 
-    // 4) fallback: pobierz profil (backend podpisuje avatar)
     val refreshed = api.getProfile()
     if (refreshed.isSuccessful) {
         return refreshed.body()?.avatar

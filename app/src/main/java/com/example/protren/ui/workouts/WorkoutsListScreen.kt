@@ -36,19 +36,16 @@ import com.example.protren.model.WorkoutLog
 private const val WORKOUTS_ROUTE = "workouts"
 private const val RESULT_KEY = "new_workout_item"
 
-// Stan filtra
 private enum class WorkoutFilter { ALL, PLANNED, DONE }
 
-// Model do listy
 data class WorkoutListItemUi(
     val id: String,
     val date: String,
     val title: String,
     val volume: String,
-    val status: String    // "planned" / "done"
+    val status: String
 ) : Serializable
 
-// Pomocnicza funkcja: dla starych logów bez statusu
 private fun inferStatusFromDate(rawDate: String?): String {
     return try {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
@@ -114,7 +111,6 @@ fun WorkoutsListScreen(navController: NavController) {
         loading = false
     }
 
-    // Echo z AddWorkout
     LaunchedEffect(Unit) {
         val handle = try {
             navController.getBackStackEntry(WORKOUTS_ROUTE).savedStateHandle
@@ -185,7 +181,6 @@ fun WorkoutsListScreen(navController: NavController) {
                 .padding(padding)
         ) {
             if (!loading && items.isNotEmpty()) {
-                // Pasek filtrów
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -285,7 +280,6 @@ fun WorkoutsListScreen(navController: NavController) {
                                             )
                                         }
 
-                                        // Znacznik statusu
                                         AssistChip(
                                             onClick = {},
                                             enabled = false,

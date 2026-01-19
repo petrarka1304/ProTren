@@ -20,13 +20,7 @@ import androidx.navigation.NavController
 import com.example.protren.data.UserPreferences
 import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 
-/**
- * Ekran zarządzania śledzonymi ćwiczeniami.
- *
- * - wybór ćwiczeń (ExercisePickerScreen)
- * - zapis w UserPreferences
- * - przejście do ekranu progresu (30 dni)
- */
+
 @Composable
 fun TrackedExercisesScreen(navController: NavController) {
 
@@ -37,7 +31,6 @@ fun TrackedExercisesScreen(navController: NavController) {
         mutableStateOf(prefs.getTrackedExercises())
     }
 
-    // odbiór listy z ExercisePickerScreen
     val handle = navController.currentBackStackEntry?.savedStateHandle
 
     LaunchedEffect(handle) {
@@ -70,7 +63,6 @@ fun TrackedExercisesScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ─── KARTA INFORMACYJNA ───
             ElevatedCard {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -124,7 +116,6 @@ fun TrackedExercisesScreen(navController: NavController) {
                 }
             }
 
-            // ─── LISTA ĆWICZEŃ ───
             if (trackedExercises.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

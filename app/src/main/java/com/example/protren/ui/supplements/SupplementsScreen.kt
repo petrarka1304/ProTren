@@ -39,7 +39,6 @@ import kotlinx.coroutines.launch
 fun SupplementsScreen(navController: NavController) {
     val ctx = LocalContext.current
     val prefs = remember { UserPreferences(ctx) }
-    // 👇 to jest TWÓJ ViewModel – w Twojej wersji przyjmuje prefs
     val vm = remember { SupplementsViewModel(prefs) }
 
     val ui by vm.state.collectAsState()
@@ -47,7 +46,6 @@ fun SupplementsScreen(navController: NavController) {
     val scope = rememberCoroutineScope()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    // w Twoim oryginale tu było loadToday()
     LaunchedEffect(Unit) {
         vm.loadToday()
     }
@@ -63,7 +61,6 @@ fun SupplementsScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    // przejście do ekranu zarządzania wszystkimi suplementami
                     IconButton(onClick = { navController.navigate("supplements/manage") }) {
                         Icon(Icons.Filled.List, contentDescription = "Wszystkie suplementy")
                     }
@@ -94,7 +91,6 @@ fun SupplementsScreen(navController: NavController) {
             }
 
             is SupplementsUIState.Error -> {
-                // w oryginale miałeś pokazanie snackbara – zostawiam
                 LaunchedEffect(s.message) {
                     scope.launch { snackbar.showSnackbar(s.message) }
                 }
@@ -133,13 +129,11 @@ fun SupplementsScreen(navController: NavController) {
                                         snackbar.showSnackbar("Nie udało się zaktualizować stanu.")
                                     }
                                 } else {
-                                    // żeby się odświeżyło
                                     vm.loadToday()
                                 }
                             }
                         },
                         onEdit = { id ->
-                            // w oryginale miałeś na kartę: przejdź do edycji
                             navController.navigate("${NavItem.SupplementEditor}/$id")
                         },
                         modifier = Modifier
@@ -222,10 +216,6 @@ private fun TodayList(
                 .joinToString(", ")
             val taken = (s.takenToday == true)
 
-            // 👉 tu tylko dopieszczam wygląd:
-            // - większe zaokrąglenie
-            // - lekki "podskok" przy zmianie (animateContentSize)
-            // - kliknięcie w całą kartę otwiera edycję
             ElevatedCard(
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
@@ -273,7 +263,6 @@ private fun TodayList(
                         }
                     }
 
-                    // przyciski akcji
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -312,7 +301,6 @@ private fun TodayList(
             }
         }
 
-        // bezpieczna przestrzeń na FAB
         item { Spacer(Modifier.height(100.dp)) }
     }
 }

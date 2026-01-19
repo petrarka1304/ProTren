@@ -40,8 +40,6 @@ class PlanDetailsViewModel(private val appContext: Context) : ViewModel() {
             }
         }
     }
-
-    /** Tworzy WorkoutLog z ćwiczeń wybranego dnia i zwraca ID utworzonego treningu. */
     fun startWorkoutForDay(
         plan: TrainingPlan,
         day: TrainingPlanDay,

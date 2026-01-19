@@ -52,7 +52,6 @@ fun BottomBar(navController: NavController) {
                 icon = Icons.Filled.Medication
             ) { navController.navigate("supplements/today") { launchSingleTop = true } }
 
-            // 🟢 NOWE: przycisk do listy czatów użytkownika
             BarItem(
                 label = "Czaty",
                 selected = route.startsWith("chats") || route.startsWith("chatThread"),

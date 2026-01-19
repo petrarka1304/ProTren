@@ -5,7 +5,6 @@ import com.example.protren.model.TrainingPlanDay
 import retrofit2.Response
 import retrofit2.http.*
 
-// ===== DTO (GET) =====
 data class TrainingPlanDto(
     val _id: String,
     val name: String,
@@ -15,7 +14,6 @@ data class TrainingPlanDto(
     val updatedAt: String? = null
 )
 
-// ===== DTO (POST/PUT) =====
 data class ExerciseRequest(
     val name: String,
     val muscleGroup: String,
@@ -31,10 +29,6 @@ data class TrainingPlanDayCreateDto(
     val exercises: List<ExerciseRequest> = emptyList()
 )
 
-/**
- * Alias dla kompatybilności — jeśli gdzieś masz starą nazwę.
- * Docelowo można usunąć po refaktorze plików, które jej używają.
- */
 @Deprecated(
     message = "Użyj TrainingPlanDayCreateDto",
     replaceWith = ReplaceWith("TrainingPlanDayCreateDto")
@@ -69,7 +63,6 @@ interface TrainingPlanApi {
     @POST("api/training-plans")
     suspend fun createPlan(@Body body: TrainingPlanCreateRequest): Response<TrainingPlanResponse>
 
-    // NOWE – utworzenie planu OD RAZU przypisanego do podopiecznego (clientId z query)
     @POST("api/training-plans")
     suspend fun createPlanForClient(
         @Query("clientId") clientId: String,
@@ -86,7 +79,6 @@ interface TrainingPlanApi {
     suspend fun deletePlan(@Path("id") id: String): Response<Unit>
 }
 
-/** Mapper DTO -> model aplikacji */
 fun TrainingPlanDto.toModel(): TrainingPlan =
     TrainingPlan(
         id = _id,

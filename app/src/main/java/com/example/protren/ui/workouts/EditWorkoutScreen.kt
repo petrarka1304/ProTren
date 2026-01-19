@@ -29,8 +29,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
-
-// ── Twoje pakiety ─────────────────────────────────────────────────────────────
 import com.example.protren.network.ApiClient
 import com.example.protren.network.WorkoutApi
 import com.example.protren.network.UpdateWorkoutRequest
@@ -52,38 +50,32 @@ fun EditWorkoutScreen(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { UserPreferences(ctx) }
 
-    // --- STATE ---
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US) }
     var date by remember { mutableStateOf("") }
     val showDatePicker = remember { mutableStateOf(false) }
     val dateState = rememberDatePickerState()
 
-    // UŻYWAMY DraftExerciseUi z AddWorkoutScreen (ta sama paczka)
     val draft = remember { mutableStateListOf<DraftExerciseUi>() }
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
 
-    // --- LIMITY (ProTren) ---
-    val MAX_SETS_CHARS = 2     // np. 99
-    val MAX_REPS_CHARS = 3     // np. 999
-    val MAX_WEIGHT_CHARS = 4   // np. 9999
+    val MAX_SETS_CHARS = 2
+    val MAX_REPS_CHARS = 3
+    val MAX_WEIGHT_CHARS = 4
 
     fun digitsOnlyLimited(input: TextFieldValue, maxChars: Int): TextFieldValue {
         val filtered = input.text.filter { it.isDigit() }.take(maxChars)
-        // zachowujemy sensowną pozycję kursora
         val newCursor = filtered.length.coerceAtMost(input.selection.end)
         return TextFieldValue(filtered, selection = androidx.compose.ui.text.TextRange(newCursor))
     }
 
-    // --- HELPERS ---
     fun computeVolumePreview(): String {
         val totalSets = draft.sumOf { it.sets }
         val totalVolume = draft.sumOf { it.sets * it.reps * it.weight }
         return "Objętość: $totalVolume kg • serie: $totalSets"
     }
 
-    // --- LOAD WORKOUT BY ID ---
     LaunchedEffect(workoutId) {
         loading = true
         try {
@@ -117,7 +109,6 @@ fun EditWorkoutScreen(
         }
     }
 
-    // --- ODBIÓR NOWYCH ĆWICZEŃ Z PICKERA (jak w Add) ---
     LaunchedEffect(Unit) {
         val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
         handle.getStateFlow<ArrayList<String>?>(EXERCISE_PICKER_RESULT_IDS, null)
@@ -141,7 +132,6 @@ fun EditWorkoutScreen(
             }
     }
 
-    // --- SAVE (PUT) ---
     fun saveEdit() {
         if (saving) return
         saving = true
@@ -154,7 +144,7 @@ fun EditWorkoutScreen(
                 val body = UpdateWorkoutRequest(
                     date = date.ifBlank { null },
                     exercises = draft.map {
-                        Exercise(                                  // ← BEZ parametru id
+                        Exercise(
                             name = it.name,
                             sets = it.sets,
                             reps = it.reps,
@@ -179,7 +169,6 @@ fun EditWorkoutScreen(
         }
     }
 
-    // --- SAVE AS NEW (POST) ---
     fun saveAsNew() {
         if (saving) return
         saving = true
@@ -192,7 +181,7 @@ fun EditWorkoutScreen(
                 val body = CreateWorkoutRequest(
                     date = date.ifBlank { null },
                     exercises = draft.map {
-                        Exercise(                                  // ← BEZ parametru id
+                        Exercise(
                             name = it.name,
                             sets = it.sets,
                             reps = it.reps,
@@ -217,7 +206,6 @@ fun EditWorkoutScreen(
         }
     }
 
-    // --- UI ---
     Scaffold(
         topBar = {
             TopAppBar(
@@ -248,7 +236,7 @@ fun EditWorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
-                // Data
+
                 item {
                     val interaction = remember { MutableInteractionSource() }
                     OutlinedTextField(
@@ -269,12 +257,10 @@ fun EditWorkoutScreen(
                     )
                 }
 
-                // Podsumowanie
                 item {
                     AssistChip(onClick = {}, label = { Text(computeVolumePreview()) }, enabled = false)
                 }
 
-                // Ćwiczenia
                 if (draft.isEmpty()) {
                     item {
                         ElevatedCard(shape = RoundedCornerShape(18.dp)) {
@@ -312,7 +298,6 @@ fun EditWorkoutScreen(
         }
     }
 
-    // DatePicker
     if (showDatePicker.value) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker.value = false },
@@ -332,7 +317,6 @@ fun EditWorkoutScreen(
         }
     }
 
-    // Dialog „Serie…”
     if (editingIndex != null) {
         val idx = editingIndex!!
         val ex = draft[idx]

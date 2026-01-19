@@ -10,8 +10,6 @@ import retrofit2.http.Path
 
 interface UploadChatApi {
 
-    // ---------- IMAGES (SINGLE) ----------
-
     @Multipart
     @POST("api/chats/{chatId}/upload/images")
     suspend fun uploadImage(
@@ -26,8 +24,6 @@ interface UploadChatApi {
         @Part file: MultipartBody.Part,
         @Part("meta") meta: RequestBody
     ): Response<ChatUploadMessageResponse>
-
-    // ---------- VIDEOS (SINGLE) ----------
 
     @Multipart
     @POST("api/chats/{chatId}/upload/videos")
@@ -45,7 +41,6 @@ interface UploadChatApi {
     ): Response<ChatUploadMessageResponse>
 }
 
-// jeśli masz już tę klasę w projekcie, NIE duplikuj – użyj swojej
 data class ChatUploadMessageResponse(
     val id: String,
     val chatId: String,

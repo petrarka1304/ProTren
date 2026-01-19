@@ -21,14 +21,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
 
-    // to obserwuje ekran
     private val _state = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = _state
 
-    // przechowujemy aktualnie edytowaną ofertę
     private var working: OfferUi = OfferUi()
 
-    // „pending” pliki (podgląd w UI; faktyczny upload robimy w uploadImages)
     private var pendingAvatarUri: Uri? = null
     private var pendingGalleryUris: List<Uri> = emptyList()
 
@@ -38,9 +35,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         data class Error(val message: String) : State()
     }
 
-    /**
-     * Pobranie oferty zalogowanego trenera: GET /api/trainers/me
-     */
     fun load() {
         _state.value = State.Loading
 
@@ -63,7 +57,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
                     }
 
                     res.code() == 400 || res.code() == 404 -> {
-                        // brak wpisu trenera — pokaż pusty formularz
                         working = OfferUi()
                         _state.value = State.Loaded(working)
                     }
@@ -77,24 +70,17 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-
-    /** Ekran woła to, żeby przepisać aktualny formularz do ViewModelu. */
     fun updateFrom(ui: OfferUi) {
         working = ui
         _state.value = State.Loaded(working)
     }
 
-    /**
-     * Upload avataru i zdjęć portfolio. Wołane z ekranu PRZED save().
-     *
-     * Zwraca true jeśli wszystko ok (albo nie było co wysyłać).
-     */
+
     suspend fun uploadImages(
         context: Context,
         avatarUri: Uri?,
         galleryUris: List<Uri>
     ): Boolean {
-        // nic nie wybrano – nic nie robimy
         if (avatarUri == null && galleryUris.isEmpty()) return true
 
         return try {
@@ -108,7 +94,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
             var newAvatarUrl: String? = working.avatarUrl
             val newGalleryUrls = (working.galleryUrls ?: emptyList()).toMutableList()
 
-            // 1) AVATAR
             if (avatarUri != null) {
                 val avatarPart = createImagePart(
                     context = context,
@@ -133,7 +118,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
 
-            // 2) PORTFOLIO (wiele plików)
             if (galleryUris.isNotEmpty()) {
                 val parts = mutableListOf<MultipartBody.Part>()
                 galleryUris.forEachIndexed { index, uri ->
@@ -152,7 +136,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
                         val body = res.body()
                         val urls = body?.urls.orEmpty()
                         if (urls.isNotEmpty()) {
-                            // nadpisujemy / ustawiamy listę zdjęć portfolio
                             newGalleryUrls.clear()
                             newGalleryUrls.addAll(urls)
                         }
@@ -165,14 +148,12 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
 
-            // 3) Wpisujemy URL-e do working i emitujemy stan
             working = working.copy(
                 avatarUrl = newAvatarUrl,
                 galleryUrls = if (newGalleryUrls.isEmpty()) null else newGalleryUrls
             )
             _state.value = State.Loaded(working)
 
-            // czyścimy pendingi – te URI już zostały obsłużone
             pendingAvatarUri = null
             pendingGalleryUris = emptyList()
 
@@ -183,9 +164,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Zapis / aktualizacja oferty trenera: PUT /api/trainers/me
-     */
     suspend fun save(): Boolean {
         return try {
             val prefs = UserPreferences(getApplication())
@@ -197,12 +175,12 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
 
             val dto = TrainerUpsertRequest(
                 name = working.name.orEmpty(),
-                email = working.email.orEmpty(),     // mapowane jako headline
+                email = working.email.orEmpty(),
                 bio = working.bio.orEmpty(),
                 specialties = working.specialties,
-                priceMonth = working.priceMonth,     // mapowane jako priceFrom
+                priceMonth = working.priceMonth,
                 avatarUrl = working.avatarUrl,
-                galleryUrls = working.galleryUrls    // NOWE – opcjonalne
+                galleryUrls = working.galleryUrls
             )
 
             val res = api.upsertMyOffer(dto)
@@ -210,7 +188,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
             if (res.isSuccessful) {
                 val trainer = res.body()
                 working = trainer?.toUi() ?: working
-                // po sukcesie czyścimy pendingi (na wszelki wypadek)
                 pendingAvatarUri = null
                 pendingGalleryUris = emptyList()
                 _state.value = State.Loaded(working)
@@ -225,11 +202,8 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ─────────────────── hooki pod zdjęcia (wołane z ekranu) ───────────────────
-
     fun onAvatarSelected(context: Context, uri: Uri?) {
         pendingAvatarUri = uri
-        // nie ustawiamy tu url, bo dostaniemy go dopiero po uploadzie
     }
 
     fun onAvatarCleared() {
@@ -240,16 +214,13 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onGalleryAdded(context: Context, uris: List<Uri>) {
         pendingGalleryUris = uris
-        // realny upload robimy w uploadImages(...)
     }
 
     fun onGalleryRemoved(index: Int) {
-        // usuwamy z pendingów (UI usuwa też lokalnie uri)
         if (index in pendingGalleryUris.indices) {
             pendingGalleryUris = pendingGalleryUris.toMutableList().also { it.removeAt(index) }
         }
 
-        // jeśli masz już zapisane URL-e na backendzie, możesz też lokalnie je zdjąć:
         val currentUrls = working.galleryUrls?.toMutableList() ?: mutableListOf()
         if (index in currentUrls.indices) {
             currentUrls.removeAt(index)
@@ -260,12 +231,9 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ─────────────────── mapowania ───────────────────
-
-    // backend -> ui
     private fun Trainer.toUi() = OfferUi(
         name = name,
-        email = email,               // u Ciebie „headline”
+        email = email,
         bio = bio,
         specialties = this.specialties ?: emptyList(),
         priceMonth = this.priceMonth,
@@ -273,18 +241,15 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         galleryUrls = try { this.galleryUrls } catch (_: Throwable) { null }
     )
 
-    // ─────────────────── dane ekranu ───────────────────
     data class OfferUi(
         val name: String? = null,
-        val email: String? = null,            // headline
+        val email: String? = null,
         val bio: String? = null,
         val specialties: List<String> = emptyList(),
         val priceMonth: Double? = null,
         val avatarUrl: String? = null,
-        val galleryUrls: List<String>? = null // NOWE (opcjonalne)
+        val galleryUrls: List<String>? = null
     )
-
-    // ─────────────────── modele uploadu ───────────────────
 
     data class FileUploadResponse(
         val url: String
@@ -293,8 +258,6 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
     data class GalleryUploadResponse(
         val urls: List<String> = emptyList()
     )
-
-    // ─────────────────── helper do budowy MultipartBody.Part ───────────────────
 
     private suspend fun createImagePart(
         context: Context,

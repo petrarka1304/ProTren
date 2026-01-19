@@ -22,7 +22,6 @@ class ResetPasswordActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // token z linku: protren://reset?token=XYZ
         val token = intent?.data?.getQueryParameter("token")
 
         setContent {

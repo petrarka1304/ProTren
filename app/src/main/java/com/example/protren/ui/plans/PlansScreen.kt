@@ -118,7 +118,6 @@ fun PlansScreen(navController: NavController) {
                         onOpen = { plan.id?.let { navController.navigate("planDetails/$it") } },
                         onEdit = { plan.id?.let { navController.navigate("planEditor/$it") } },
                         onDelete = {
-                            // ProTren: zostawiamy Twoje podejście — edytor ma flow potwierdzenia + DELETE
                             plan.id?.let { navController.navigate("planEditor/$it") }
                         }
                     )
@@ -128,7 +127,6 @@ fun PlansScreen(navController: NavController) {
     }
 }
 
-/* ───────────────────── STANY ───────────────────── */
 
 @Composable
 private fun KompaktowyStanPusty(padding: PaddingValues, onCreate: () -> Unit) {
@@ -176,8 +174,6 @@ private fun KompaktowyStanBledu(
         }
     }
 }
-
-/* ───────────────────── SWIPE TŁO ───────────────────── */
 
 private enum class UkladTlaSwipe { LEWO, PRAWO, SRODEK }
 
@@ -267,8 +263,6 @@ private fun TloDlaSwipe(wartosc: SwipeToDismissBoxValue) {
         }
     }
 }
-
-/* ───────────────────── KARTA + SWIPE ───────────────────── */
 
 @Composable
 private fun NowoczesnaKartaPlanu(
@@ -458,7 +452,6 @@ private fun MiniStatystyka(text: String) {
     }
 }
 
-/* ───────────────────── TAGI ───────────────────── */
 
 private fun wywnioskujTagPlanu(plan: TrainingPlan): String {
     val titles = plan.days.joinToString(" ") { it.title }.lowercase()

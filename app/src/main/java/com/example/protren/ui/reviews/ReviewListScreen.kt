@@ -1,9 +1,7 @@
 package com.example.protren.ui.reviews
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.Image
+
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,7 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.protren.viewmodel.ReviewViewModel
-import kotlinx.coroutines.launch
+
 
 @Composable
 fun ReviewListScreen(

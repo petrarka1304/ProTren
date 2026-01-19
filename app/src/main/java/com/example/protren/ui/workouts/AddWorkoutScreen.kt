@@ -38,7 +38,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-// BACKEND / RETROFIT:
 import com.example.protren.network.ApiClient
 import com.example.protren.network.WorkoutApi
 import com.example.protren.model.CreateWorkoutRequest
@@ -46,7 +45,7 @@ import com.example.protren.model.Exercise
 import com.example.protren.model.WorkoutLog
 import com.example.protren.data.UserPreferences
 
-private const val WORKOUTS_ROUTE = "workouts"   // nazwa trasy listy treningów
+private const val WORKOUTS_ROUTE = "workouts"
 private const val RESULT_KEY = "new_workout_item"
 
 data class DraftExerciseUi(
@@ -57,7 +56,6 @@ data class DraftExerciseUi(
     val weight: Int = 0
 )
 
-// Relacja daty względem "dzisiaj"
 private enum class DateRelation { PAST, TODAY, FUTURE }
 
 @Composable
@@ -67,7 +65,6 @@ fun AddWorkoutScreen(navController: NavController) {
     val ctx = LocalContext.current
     val prefs = remember { UserPreferences(ctx) }
 
-    // ─── FORM ────────────────────────────────────────────────────────────────────
     var title by rememberSaveable { mutableStateOf("") }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US) }
     var date by rememberSaveable { mutableStateOf("") }
@@ -77,14 +74,9 @@ fun AddWorkoutScreen(navController: NavController) {
     val draft = remember { mutableStateListOf<DraftExerciseUi>() }
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var isSaving by remember { mutableStateOf(false) }
-
-    // Dzisiejsza data (zapamiętana)
     val today = remember { LocalDate.now() }
-
-    // Czy dzisiejszy trening traktujemy jako "planowany" (true) czy "wykonany" (false)
     var isPlannedToday by rememberSaveable { mutableStateOf(true) }
 
-    // Funkcja pomocnicza: na podstawie stringa `date` zwraca LocalDate + relację do dzisiaj
     fun resolveDateAndRelation(): Pair<LocalDate, DateRelation> {
         val chosen = runCatching {
             if (date.isBlank()) today else LocalDate.parse(date, dateFormatter)
@@ -98,7 +90,6 @@ fun AddWorkoutScreen(navController: NavController) {
         return chosen to relation
     }
 
-    // ─── ODBIÓR WYBRANYCH ĆWICZEŃ Z PICKERA ─────────────────────────────────────
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, navController) {
         val observer = LifecycleEventObserver { _, event ->
@@ -110,7 +101,6 @@ fun AddWorkoutScreen(navController: NavController) {
                     val before = draft.size
                     ids.forEachIndexed { idx, id ->
                         val n = names?.getOrNull(idx) ?: "Ćwiczenie"
-                        // dopinamy nowe, nie usuwamy starych
                         if (draft.none { it.id == id }) {
                             draft.add(DraftExerciseUi(id = id, name = n))
                         }
@@ -134,7 +124,6 @@ fun AddWorkoutScreen(navController: NavController) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // ─── WALIDACJA I PODSUMOWANIA ────────────────────────────────────────────────
     fun isValid(): Boolean = title.isNotBlank() && draft.isNotEmpty()
 
     fun computeVolumePreview(): String {
@@ -144,7 +133,6 @@ fun AddWorkoutScreen(navController: NavController) {
         return "$exCount ćw • $totalSets serii • $totalVolume kg"
     }
 
-    // ─── ZAPIS DO BACKENDU + ECHO DO LISTY ──────────────────────────────────────
     fun saveAndReturn() {
         if (!isValid()) {
             scope.launch {
@@ -229,7 +217,6 @@ fun AddWorkoutScreen(navController: NavController) {
         }
     }
 
-    // ─── UI ──────────────────────────────────────────────────────────────────────
     Scaffold(
         topBar = {
             TopAppBar(
@@ -248,7 +235,6 @@ fun AddWorkoutScreen(navController: NavController) {
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
-                    // PRZEKAŻ DO PICKERA JUŻ WYBRANE ĆWICZENIA (PRESELECT)
                     val handle = navController.currentBackStackEntry?.savedStateHandle
                     handle?.set(
                         EXERCISE_PICKER_PRESELECTED_IDS,
@@ -269,7 +255,6 @@ fun AddWorkoutScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
-            // Nazwa treningu
             item {
                 OutlinedTextField(
                     value = title,
@@ -281,7 +266,6 @@ fun AddWorkoutScreen(navController: NavController) {
                 )
             }
 
-            // Data – klik + ikona (Material 3 DatePicker)
             item {
                 val interaction = remember { MutableInteractionSource() }
                 OutlinedTextField(
@@ -306,7 +290,6 @@ fun AddWorkoutScreen(navController: NavController) {
                 )
             }
 
-            // 🔘 Przycisk planuję / wykonałem – tylko dla dzisiejszej daty
             item {
                 val (_, relation) = resolveDateAndRelation()
 
@@ -380,7 +363,6 @@ fun AddWorkoutScreen(navController: NavController) {
                     }
                 }
             } else {
-                // Lista ćwiczeń
                 item {
                     Text("Ćwiczenia", style = MaterialTheme.typography.titleMedium)
                 }
@@ -424,7 +406,6 @@ fun AddWorkoutScreen(navController: NavController) {
                     }
                 }
 
-                // Podsumowanie objętości
                 item {
                     AssistChip(
                         onClick = {},
@@ -436,7 +417,6 @@ fun AddWorkoutScreen(navController: NavController) {
         }
     }
 
-    // DatePickerDialog
     if (showDatePicker.value) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker.value = false },
@@ -465,7 +445,6 @@ fun AddWorkoutScreen(navController: NavController) {
         }
     }
 
-    // Dialog edycji serii / powtórzeń / ciężaru
     editingIndex?.let { idx ->
         if (idx in draft.indices) {
             val ex = draft[idx]

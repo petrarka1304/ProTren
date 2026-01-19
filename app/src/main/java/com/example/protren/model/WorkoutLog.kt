@@ -7,10 +7,9 @@ data class WorkoutLog(
     val id: String? = null,
     val title: String? = null,
     val trainingPlanId: String? = null,
-    val date: String? = null,                 // ISO lub YYYY-MM-DD
+    val date: String? = null,
 
-    // NOWE POLE – status treningu z backendu
-    val status: String? = null,               // "planned" / "done"
+    val status: String? = null,
 
     val exercises: List<Exercise>? = emptyList()
 )

@@ -2,13 +2,7 @@ package com.example.protren.model
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Spójny z backendem:
- * id, userId, name, email, bio, specialties, priceMonth, ratingAvg, ratingCount, avatarUrl
- * + opcjonalnie galleryUrls, traineesCount, workoutsCount.
- *
- * Wszystko null-safe w UI.
- */
+
 data class Trainer(
     @SerializedName("id") val id: String? = null,
     @SerializedName("_id") val mongoId: String? = null,
@@ -30,7 +24,6 @@ data class Trainer(
     @SerializedName("galleryUrls") val galleryUrls: List<String>? = null,
     @SerializedName("maxTrainees") val maxTrainees: Int? = null,
 
-    // metryki prywatne (opcjonalne)
     @SerializedName("traineesCount") val traineesCount: Int? = null,
     @SerializedName("workoutsCount") val workoutsCount: Int? = null
 ) {

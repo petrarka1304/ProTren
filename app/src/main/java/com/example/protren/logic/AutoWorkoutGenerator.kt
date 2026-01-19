@@ -4,21 +4,13 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.random.Random
 
-/**
- * Generator planów oparty o katalog ćwiczeń z bazy (tagi + sprzęt).
- *
- * Wymagania po stronie bazy:
- *  - każde ćwiczenie może mieć: name, group, equipment, tags:[]
- *  - w seedzie/tagach używamy m.in.: "squat","hinge","push","pull","single_leg","core","cardio"
- *  - equipment zawiera np.: "Siłownia", "Dom", "Siłownia/Dom", "Drążek", "Brak", "Maszyna", "Sztanga", "Hantle"
- */
 
 enum class PlanType { FULL_BODY, UPPER_LOWER, PUSH_PULL_LEGS, CUSTOM }
 enum class Level { BEGINNER, INTERMEDIATE, ADVANCED }
 enum class Equipment { HOME, GYM, MINIMAL }
 enum class Goal { STRENGTH, HYPERTROPHY, ENDURANCE, FAT_LOSS }
 
-/** Minimalna reprezentacja ćwiczenia z bazy do generatora. */
+/** reprezentacja ćwiczenia z bazy do generatora */
 data class ExerciseDb(
     val name: String,
     val group: String? = null,
@@ -32,7 +24,7 @@ data class GenerationOptions(
     val level: Level,
     val equipment: Equipment,
     val goal: Goal,
-    val numberOfWeeks: Int = 4 // NOWOŚĆ – liczba tygodni (1–6), domyślnie 4
+    val numberOfWeeks: Int = 4
 )
 
 data class ExerciseSpec(
@@ -55,11 +47,11 @@ data class GeneratedPlan(
 
 object AutoWorkoutGenerator {
 
-    /* --- nowość: celowana liczba ćwiczeń na dzień --- */
-    private const val MIN_EXERCISES_PER_DAY = 8       // ustaw ~7–9; domyślnie 8
-    private const val MAX_ACCESSORIES_PER_DAY = 5      // bezpieczny limit, by nie kręcić się w pętli
+    /*celowana liczba ćwiczeń na dzień*/
+    private const val MIN_EXERCISES_PER_DAY = 8
+    private const val MAX_ACCESSORIES_PER_DAY = 5
 
-    /* ---------- mapowanie sprzętu na słowa kluczowe z bazy ---------- */
+    /*mapowanie sprzętu na słowa kluczowe z bazy */
     private fun equipmentMatches(eq: Equipment, equipmentField: String?): Boolean {
         val e = equipmentField?.lowercase().orEmpty()
         return when (eq) {
@@ -69,7 +61,6 @@ object AutoWorkoutGenerator {
         }
     }
 
-    /* pattern -> główna grupa do liczenia objętości */
     private val patternToGroup = mapOf(
         "squat" to "nogi",
         "hinge" to "tył nóg/pośladki",
@@ -80,7 +71,7 @@ object AutoWorkoutGenerator {
         "conditioning" to "cardio"
     )
 
-    /* bazowa objętość tygodniowa wg celu/poziomu */
+
     private fun weeklySetsBase(goal: Goal, level: Level): Map<String, Int> {
         val base = mutableMapOf(
             "nogi" to 12, "tył nóg/pośladki" to 12,
@@ -94,7 +85,7 @@ object AutoWorkoutGenerator {
                 base.replaceAll { _, v -> (v * 0.9).toInt().coerceAtLeast(6) }
                 base["conditioning"] = 3
             }
-            Goal.HYPERTROPHY -> { /* domyślna objętość */ }
+            Goal.HYPERTROPHY -> {  }
         }
         when (level) {
             Level.BEGINNER     -> base.replaceAll { _, v -> max(6, (v * 0.75).toInt()) }
@@ -104,7 +95,6 @@ object AutoWorkoutGenerator {
         return base
     }
 
-    /* zakres powtórzeń i bazowy RIR wg celu */
     private fun repsAndRir(goal: Goal): Pair<IntRange, Int> = when (goal) {
         Goal.STRENGTH     -> 4..6  to 2
         Goal.HYPERTROPHY  -> 6..12 to 1
@@ -112,7 +102,7 @@ object AutoWorkoutGenerator {
         Goal.FAT_LOSS     -> 8..15  to 1
     }
 
-    /* ---------- SZABLONY SPLITÓW ---------- */
+    /*SZABLONY SPLITÓW*/
     private fun splitTemplate(type: PlanType, days: Int): List<List<String>> {
         val d = days.coerceIn(2, 6)
 
@@ -146,7 +136,7 @@ object AutoWorkoutGenerator {
         }
     }
 
-    /* ---------- wybór ćwiczenia z katalogu ---------- */
+    /*wybór ćwiczenia z katalogu*/
     private fun pickFromCatalog(
         pattern: String,
         eq: Equipment,
@@ -158,17 +148,14 @@ object AutoWorkoutGenerator {
 
         fun List<ExerciseDb>.avoidDupes() = this.filter { it.name !in disallowNames }
 
-        // 1) preferuj dopasowanie tagu + sprzętu
         val p1 = catalog.filter {
             tag in it.tags.map(String::lowercase) && equipmentMatches(eq, it.equipment)
         }.avoidDupes()
         if (p1.isNotEmpty()) return p1.random(rng).name
 
-        // 2) jeśli brak – ignoruj sprzęt (tag wystarczy)
         val p2 = catalog.filter { tag in it.tags.map(String::lowercase) }.avoidDupes()
         if (p2.isNotEmpty()) return p2.random(rng).name
 
-        // 3) fallback – heurystyka po nazwie
         val heuristics = when (tag) {
             "squat"       -> listOf("przysiad")
             "hinge"       -> listOf("martwy", "rdl", "hip thrust", "ciąg")
@@ -182,11 +169,10 @@ object AutoWorkoutGenerator {
         val p3 = catalog.filter { e -> heuristics.any { key -> e.name.lowercase().contains(key) } }.avoidDupes()
         if (p3.isNotEmpty()) return p3.random(rng).name
 
-        // 4) ostatecznie zwróć sam pattern (nie powinno się zdarzyć)
         return pattern
     }
 
-    /* ---------- GENERACJA ---------- */
+    /*GENERACJA*/
     fun generate(
         options: GenerationOptions,
         catalog: List<ExerciseDb>,
@@ -213,7 +199,6 @@ object AutoWorkoutGenerator {
                 val exList = mutableListOf<ExerciseSpec>()
                 val title = "Dzień ${idx + 1}"
 
-                // --- główne ćwiczenia wg szablonu ---
                 patterns.forEach { p ->
                     val group = patternToGroup[p] ?: return@forEach
                     val total = weeklyBudget[group] ?: 0
@@ -245,7 +230,6 @@ object AutoWorkoutGenerator {
                     }
                 }
 
-                // --- sortowanie głównych (ciężkie -> lekkie) ---
                 val orderedMain = exList.sortedBy {
                     when (it.pattern) {
                         "squat","hinge" -> 0
@@ -256,12 +240,9 @@ object AutoWorkoutGenerator {
                     }
                 }.toMutableList()
 
-                // --- akcesoria, aby dobić do 7–9 ćwiczeń ---
                 if (orderedMain.size < MIN_EXERCISES_PER_DAY) {
                     val accessoriesPriority = buildList {
-                        // najpierw to, co jest w danym dniu
                         addAll(patterns)
-                        // potem uzupełnienia: upper/lower/core
                         addAll(listOf("push","pull","single_leg","core","hinge","squat"))
                     }
 
@@ -286,7 +267,6 @@ object AutoWorkoutGenerator {
                         )
                         if (accName in nameBlocklist) continue
 
-                        // Akcesoria: 2 serie, delikatnie "lżejszy" RIR
                         val accRir = (baseRir + 1 - rirDelta).coerceAtLeast(0)
                         val accReps = IntRange(
                             max(3, (repRange.first * progressFactor).toInt()),

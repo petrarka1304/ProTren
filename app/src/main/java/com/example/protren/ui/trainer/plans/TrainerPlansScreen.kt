@@ -27,7 +27,6 @@ fun TrainerPlansScreen(
     traineeId: String,
     api: TrainerPlanApi,
 ) {
-    // === API do katalogu (jak u użytkownika)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { UserPreferences(ctx) }
     val supplementApi: SupplementApi = remember {
@@ -96,7 +95,6 @@ fun TrainerPlansScreen(
         }
     }
 
-    // === DOLNY ARKUSZ – TERAZ pobiera dane z bazy (katalog)
     TrainerSupplementEditorSheet(
         visible = ui.editorVisible,
         initial = ui.editorInitial,

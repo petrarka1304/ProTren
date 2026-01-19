@@ -10,8 +10,7 @@ import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
 /**
- * Uruchamiaj na starcie (np. w Splash/StartUp):
- * - jeśli ACCESS wygasł albo go brak → spróbuje odświeżyć przez REFRESH (bez Authorization)
+ * - jeśli ACCESS wygasł albo go brak → spróbuje odświeżyć przez REFRESH
  * - zapisze nowe tokeny, albo wyczyści preferencje i zwróci false
  */
 object AuthBootstrapper {
@@ -28,7 +27,7 @@ object AuthBootstrapper {
             return@withContext false
         }
 
-        // Refresh powinien iść klientem BEZ auth-interceptora
+        // Refresh
         val retrofit = ApiClient.create()
         val api = retrofit.create(RefreshApi::class.java)
 
@@ -51,24 +50,19 @@ object AuthBootstrapper {
             val newRefresh = body.refreshToken?.trim()
 
             if (newAccess.isNullOrEmpty()) {
-                // bez accessa nie ma sensu kontynuować
                 prefs.clearAll()
                 return@withContext false
             }
 
-            // jeśli backend nie zwróci nowego refreshToken, zostaw stary
+
             val finalRefresh = if (!newRefresh.isNullOrEmpty()) newRefresh else refreshToken
 
             prefs.setTokens(newAccess, finalRefresh)
             true
         } catch (e: HttpException) {
-            // 4xx/5xx
             prefs.clearAll()
             false
         } catch (e: Throwable) {
-            // brak sieci, timeout itp.
-            // możesz rozważyć: NIE czyścić tokenów przy błędach sieci,
-            // ale bezpiecznie zostawiam jak było u Ciebie: clearAll()
             prefs.clearAll()
             false
         }

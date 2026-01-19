@@ -29,7 +29,6 @@ class TrainerListViewModel(app: Application) : AndroidViewModel(app) {
             _loading.value = true
             _error.value = null
             try {
-                // lista trenerów jest publiczna – nie musimy mieć tokena
                 val token = UserPreferences(getApplication()).getAccessToken().orEmpty()
                 val api = ApiClient.createWithAuth(tokenProvider = { token }).create(TrainerApi::class.java)
                 val res = api.listTrainers()
@@ -42,7 +41,6 @@ class TrainerListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
-    // helper
     private fun Response<*>.errorMsg(): String {
         return try {
             val body = errorBody()?.string()

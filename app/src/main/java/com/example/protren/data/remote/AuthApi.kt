@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/protren/data/remote/AuthApi.kt
 package com.example.protren.data.remote
 
 import retrofit2.Response
@@ -9,7 +8,7 @@ data class LoginRequest(val email: String, val password: String)
 data class RegisterRequest(val email: String, val password: String, val role: String = "user")
 
 data class LoginResponse(
-    val token: String?,           // = accessToken
+    val token: String?,
     val accessToken: String,
     val refreshToken: String,
     val user: LoginUser

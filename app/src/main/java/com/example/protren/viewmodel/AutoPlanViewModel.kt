@@ -3,7 +3,6 @@ package com.example.protren.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.protren.data.ExerciseRepository
 import com.example.protren.logic.*
 import com.example.protren.network.ExerciseRequest
 import com.example.protren.network.TrainingPlanApi
@@ -13,6 +12,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.protren.repository.ExerciseRepository
 
 class AutoPlanViewModel(
     private val repo: ExerciseRepository,
@@ -29,7 +29,7 @@ class AutoPlanViewModel(
             level = Level.BEGINNER,
             equipment = Equipment.GYM,
             goal = Goal.HYPERTROPHY,
-            numberOfWeeks = 4 // domyślnie 4 tygodnie
+            numberOfWeeks = 4
         )
     ); private set
 
@@ -73,7 +73,6 @@ class AutoPlanViewModel(
         plan = null
     }
 
-    /** Zapis do backendu – jawne mapowanie na ExerciseRequest */
     suspend fun savePlan(): Pair<Boolean, String> {
         val current = plan ?: return false to "Najpierw wygeneruj plan"
 
@@ -93,7 +92,7 @@ class AutoPlanViewModel(
                                 repsMin = ex.reps.first,
                                 repsMax = ex.reps.last,
                                 rir = ex.rir,
-                                pattern = ex.pattern          // <── KLUCZOWA LINIA
+                                pattern = ex.pattern
                             )
                         }
                     )
@@ -110,7 +109,6 @@ class AutoPlanViewModel(
     }
 }
 
-/* ===== Fabryka ===== */
 class AutoPlanVmFactory(
     private val repo: ExerciseRepository,
     private val planApi: TrainingPlanApi
@@ -120,7 +118,6 @@ class AutoPlanVmFactory(
         AutoPlanViewModel(repo, planApi) as T
 }
 
-/* ===== Pomocnicze ===== */
 private fun PlanType.readable(): String = when (this) {
     PlanType.FULL_BODY      -> "całego ciała"
     PlanType.UPPER_LOWER    -> "góra / dół"

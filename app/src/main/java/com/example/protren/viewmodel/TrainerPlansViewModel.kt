@@ -23,7 +23,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = UserPreferences(app)
 
-    // --------- API (CONFIG) ----------
     private fun authClient(): OkHttpClient {
         val token = prefs.getAccessToken()
         return OkHttpClient.Builder()
@@ -52,7 +51,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
             .build()
             .create(TrainerAdminApi::class.java)
 
-    // --------- STATE ----------
     private val _plans = MutableStateFlow<List<TrainerPlanItem>>(emptyList())
     val plans: StateFlow<List<TrainerPlanItem>> = _plans
 
@@ -65,7 +63,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // --------- LOAD PLANS ----------
     fun load() {
         viewModelScope.launch {
             _loading.value = true
@@ -89,7 +86,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // --------- LOAD TRAINEES ----------
     fun loadTrainees() {
         viewModelScope.launch {
             try {
@@ -105,7 +101,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // --------- DELETE ----------
     fun delete(id: String, cb: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -122,7 +117,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // --------- CREATE ----------
     fun create(name: String, cb: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -144,11 +138,9 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // --------- ASSIGN TO CLIENT ----------
     fun assignPlanToClient(planId: String, clientId: String, cb: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             try {
-                // Pobierz plan
                 val planRes = plansApi().getPlan(planId)
                 if (!planRes.isSuccessful) {
                     cb(false, "Nie udało się pobrać planu")
@@ -160,7 +152,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
 
-                // Zmapuj dni + ćwiczenia
                 val dayDtos = plan.days.map { day ->
                     TrainingPlanDayCreateDto(
                         title = day.title,
@@ -172,7 +163,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
                                 repsMin = 10,
                                 repsMax = 12,
                                 rir = 2,
-                                // 🔴 pattern musi być niepusty
                                 pattern = "straight"
                             )
                         }
@@ -185,7 +175,6 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
                     isPublic = false
                 )
 
-                // Wyślij do backendu
                 val res = trainerApi().createPlanForUser(clientId, body)
                 if (res.isSuccessful) {
                     cb(true, "Plan przypisany podopiecznemu")

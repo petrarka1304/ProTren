@@ -7,7 +7,7 @@ import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.*
 
-// -------------------- DTO --------------------
+
 
 data class SaveProfileResponse(
     val msg: String? = null,
@@ -26,13 +26,6 @@ data class NutritionResponse(
     val details: NutritionDetails? = null
 )
 
-/**
- * Cloudflare R2:
- * Backend po uploadzie avatara zwykle zwraca avatarKey (klucz w R2) + czasem profile.
- * avatarUrl może się pojawić tylko jeśli backend dodatkowo wygeneruje signed URL.
- *
- * Dlatego pola są nullable -> nie wywalasz się na parse/NullPointer.
- */
 data class AvatarUploadResponse(
     @SerializedName("avatarKey")
     val avatarKey: String? = null,
@@ -44,10 +37,6 @@ data class AvatarUploadResponse(
     val profile: UserProfile? = null
 )
 
-
-
-// 🔹 ODPOWIEDŹ DLA TRENERA – PROFIL PODOPIECZNEGO
-// 🔹 zgodna z backendem po poprawkach
 data class TraineeProfileResponse(
     @SerializedName("id")
     val id: String? = null,
@@ -58,11 +47,9 @@ data class TraineeProfileResponse(
     @SerializedName("email")
     val email: String,
 
-    // ✅ TO MASZ NA LIŚCIE /api/trainer/trainees
     @SerializedName("name")
     val name: String? = null,
 
-    // ✅ JEŚLI backend też wyśle — super, ale nie wymagamy
     @SerializedName("firstName")
     val firstName: String? = null,
 
@@ -82,34 +69,27 @@ data class TraineeProfileResponse(
     val profile: UserProfile? = null
 )
 
-// -------------------- API --------------------
-
 interface UserProfileApi {
 
-    // GET /api/profile
     @GET("api/profile")
     suspend fun getProfile(): Response<UserProfile>
 
-    // PUT /api/profile  (upsert własnego profilu)
     @PUT("api/profile")
     suspend fun saveMyProfile(
         @Body profile: UserProfile
     ): Response<SaveProfileResponse>
 
-    // PUT /api/profile/{userId}  (trener/admin)
     @PUT("api/profile/{userId}")
     suspend fun saveUserProfile(
         @Path("userId") userId: String,
         @Body profile: UserProfile
     ): Response<SaveProfileResponse>
 
-    // POST /api/profile/nutrition
     @POST("api/profile/nutrition")
     suspend fun calculateNutrition(
         @Body profile: UserProfile
     ): Response<NutritionResponse>
 
-    // POST /api/profile-uploads/me/avatar
     @Multipart
     @POST("api/profile-uploads/me/avatar")
     suspend fun uploadAvatar(
@@ -117,18 +97,12 @@ interface UserProfileApi {
         @Part("meta") metaJson: RequestBody? = null
     ): Response<AvatarUploadResponse>
 
-    /**
-     * (Opcjonalne) jeśli w UI chcesz od razu rozwiązać avatarKey -> signed URL
-     * bez pobierania całego profilu:
-     *
-     * GET /api/files/view?key=...
-     */
+
     @GET("api/files/view")
     suspend fun viewFile(
         @Query("key") key: String
     ): Response<FileViewResponse>
 
-    // GET /api/trainer/trainee/{userId}/profile
     @GET("api/trainer/trainee/{userId}/profile")
     suspend fun getUserProfile(
         @Path("userId") userId: String

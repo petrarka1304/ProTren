@@ -8,59 +8,44 @@ import java.util.concurrent.TimeUnit
 
 class UserPreferences(context: Context) {
 
-    // zawsze applicationContext, by nie trzymać Activity
+
     private val appContext = context.applicationContext
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("protren_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        private const val KEY_TOKEN = "auth_token"      // ACCESS (JWT)
-        private const val KEY_REFRESH = "refresh_token" // REFRESH (JWT)
+        private const val KEY_TOKEN = "auth_token"
+        private const val KEY_REFRESH = "refresh_token"
         private const val KEY_USER_ID = "user_id"
 
         private const val KEY_EMAIL = "user_email"
         private const val KEY_ROLE = "user_role"
         private const val KEY_NAME = "user_name"
 
-        // śledzone ćwiczenia (MVP lokalnie)
+        // śledzone ćwiczenia
         private const val KEY_TRACKED_EXERCISES = "tracked_exercises"
     }
 
-    /* ───────────── TOKENS ───────────── */
+    /*TOKENS*/
 
-    /**
-     * Zapisuje ACCESS token w formie "gołej" (bez "Bearer ").
-     */
     fun saveToken(token: String?) {
         val normalized = normalizeToken(token)
         prefs.edit().putString(KEY_TOKEN, normalized ?: "").apply()
     }
 
-    /**
-     * ACCESS bez "Bearer " i bez spacji
-     */
     fun getAccessToken(): String? = prefs.getString(KEY_TOKEN, null)
         ?.let { normalizeToken(it) }
         ?.takeIf { it.isNotBlank() }
 
-    /**
-     * Zapisuje REFRESH token w formie "gołej" (bez "Bearer ").
-     */
     fun saveRefresh(token: String?) {
         val normalized = normalizeToken(token)
         prefs.edit().putString(KEY_REFRESH, normalized ?: "").apply()
     }
 
-    /**
-     * REFRESH bez "Bearer " i bez spacji
-     */
     fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH, null)
         ?.let { normalizeToken(it) }
         ?.takeIf { it.isNotBlank() }
 
-    /**
-     * Ustawia oba tokeny (normalizuje: trim + usuwa "Bearer ").
-     */
     fun setTokens(access: String?, refresh: String?) {
         val normAccess = normalizeToken(access)
         val normRefresh = normalizeToken(refresh)
@@ -81,10 +66,7 @@ class UserPreferences(context: Context) {
             .apply()
     }
 
-    /**
-     * Pełne czyszczenie (tokeny + profil) — ważne przy wylogowaniu,
-     * żeby nie mieszać danych między kontami.
-     */
+    /**Pełne czyszczenie*/
     fun clearAll() {
         prefs.edit()
             .remove(KEY_TOKEN)
@@ -114,10 +96,10 @@ class UserPreferences(context: Context) {
             val nowSeconds = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis())
             expSeconds <= nowSeconds
         } catch (e: Exception) {
-            true // jeśli cokolwiek pójdzie nie tak → traktujemy jako wygasły
+            true
         }
     }
-    /* ───────────── DANE PROFILU ───────────── */
+    /*DANE PROFILU */
 
     fun saveEmail(email: String?) {
         prefs.edit().putString(KEY_EMAIL, email ?: "").apply()
@@ -143,13 +125,12 @@ class UserPreferences(context: Context) {
 
     fun getUserId(): String? = prefs.getString(KEY_USER_ID, null)
 
-    /* ───────────── ✅ ŚLEDZONE ĆWICZENIA ───────────── */
+    /*ŚLEDZONE ĆWICZENIA*/
 
     fun saveTrackedExercises(names: List<String>) {
         val clean = names
             .map { it.trim() }
             .filter { it.isNotBlank() }
-            // deduplikacja case-insensitive (pompki == Pompki)
             .distinctBy { it.lowercase() }
 
         prefs.edit().putStringSet(KEY_TRACKED_EXERCISES, clean.toSet()).apply()
@@ -166,7 +147,7 @@ class UserPreferences(context: Context) {
         prefs.edit().remove(KEY_TRACKED_EXERCISES).apply()
     }
 
-    /* ───────────── ZGODNOŚĆ WSTECZNA (aliasy) ───────────── */
+    /*ZGODNOŚĆ WSTECZNA*/
 
     @Deprecated("Użyj getAccessToken()", ReplaceWith("getAccessToken()"))
     fun getToken(): String? = getAccessToken()
@@ -177,12 +158,7 @@ class UserPreferences(context: Context) {
     @Deprecated("Użyj getRefreshToken()", ReplaceWith("getRefreshToken()"))
     fun getRefresh(): String? = getRefreshToken()
 
-    /* ───────────── Pomoc do 'exp' z JWT ───────────── */
-
-    /**
-     * Zwraca sekundowy timestamp 'exp' z access tokena (albo null).
-     * Działa bez bibliotek JWT — parsujemy payload base64url.
-     */
+    
     fun getAccessExpEpochSeconds(): Long? {
         val token = getAccessToken() ?: return null
         val parts = token.split(".")

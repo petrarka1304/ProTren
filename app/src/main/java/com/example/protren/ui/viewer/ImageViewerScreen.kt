@@ -30,7 +30,6 @@ fun ImageViewerScreen(
     nav: NavController,
     startIndex: Int
 ) {
-    // Odbierz listę URL-i ze SavedStateHandle (ustawianą przed nawigacją)
     val urls = remember {
         nav.previousBackStackEntry?.savedStateHandle?.get<List<String>>("image_urls")
             ?: nav.currentBackStackEntry?.savedStateHandle?.get<List<String>>("image_urls")
@@ -79,7 +78,6 @@ fun ImageViewerScreen(
                 ) { page ->
                     val url = urls[page]
 
-                    // Stan transformacji dla TEJ strony
                     var scale by remember(page) { mutableFloatStateOf(1f) }
                     var offsetX by remember(page) { mutableFloatStateOf(0f) }
                     var offsetY by remember(page) { mutableFloatStateOf(0f) }
@@ -87,7 +85,6 @@ fun ImageViewerScreen(
                     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
                         val newScale = (scale * zoomChange).coerceIn(1f, 4f)
                         if (newScale <= 1.01f) {
-                            // przy małym zoomie blokujemy przesuwanie
                             offsetX = 0f; offsetY = 0f
                         } else {
                             offsetX += panChange.x

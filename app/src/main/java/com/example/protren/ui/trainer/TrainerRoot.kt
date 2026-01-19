@@ -60,7 +60,6 @@ fun TrainerRoot(navController: NavHostController) {
         ) {
 
             composable("trainerHome") {
-                // ✅ przekazujemy ROOT navController jako appNav
                 TrainerHomeScreen(nav = trainerNav, appNav = navController)
             }
 

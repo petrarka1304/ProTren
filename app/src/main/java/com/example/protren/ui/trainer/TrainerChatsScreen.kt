@@ -64,10 +64,7 @@ fun TrainerChatsScreen(nav: NavController) {
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(TrainerChatFilter.ALL) }
 
-    // ✅ 1) Refresh na wejściu
     LaunchedEffect(Unit) { vm.refresh(force = true) }
-
-    // ✅ 2) Refresh na powrót do ekranu (ON_RESUME)
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val obs = LifecycleEventObserver { _, event ->
@@ -79,7 +76,6 @@ fun TrainerChatsScreen(nav: NavController) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
-    // ✅ 3) Auto-refresh co 30s – tylko gdy ekran jest aktywny
     LaunchedEffect(Unit) {
         while (true) {
             delay(30_000)
@@ -87,7 +83,6 @@ fun TrainerChatsScreen(nav: NavController) {
         }
     }
 
-    // ✅ dane z VM
     val items = vm.items
     val loading = vm.loading
     val error = vm.error
@@ -131,7 +126,6 @@ fun TrainerChatsScreen(nav: NavController) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Szukajka
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -148,7 +142,6 @@ fun TrainerChatsScreen(nav: NavController) {
                 )
             }
 
-            // Filtry
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -174,7 +167,6 @@ fun TrainerChatsScreen(nav: NavController) {
 
             Spacer(Modifier.height(8.dp))
 
-            // ✅ loader tylko gdy pusto + ładuje
             AnimatedVisibility(
                 visible = loading && items.isEmpty(),
                 enter = fadeIn(),
@@ -384,8 +376,6 @@ private fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier 
     }
 }
 
-/* -------------------- ViewModel -------------------- */
-
 private class TrainerChatsVm(app: Application) : ViewModel() {
     private val prefs = UserPreferences(app)
     private val api by lazy {
@@ -401,7 +391,6 @@ private class TrainerChatsVm(app: Application) : ViewModel() {
     var error by mutableStateOf<String?>(null); private set
     var items by mutableStateOf<List<ChatSummaryDto>>(emptyList()); private set
 
-    // ✅ single-flight: nie rób 2 refreshy naraz
     private var refreshRunning = false
 
     suspend fun refresh(force: Boolean = false) {

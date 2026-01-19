@@ -59,7 +59,6 @@ fun SettingsScreen(
     val themeController = LocalThemeController.current
     var isDark by remember { mutableStateOf(themeController.isDark) }
 
-    // 👇 NOWE: czy zalogowany użytkownik jest trenerem?
     var isTrainer by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
@@ -68,10 +67,6 @@ fun SettingsScreen(
                 firstName = s.me.firstName.orEmpty()
                 lastName = s.me.lastName.orEmpty()
                 email = s.me.email.orEmpty()
-
-                // TU decydujemy, że to trener:
-                // jeśli masz boolean isTrainer w modelu, zamień na:
-                // isTrainer = s.me.isTrainer == true
                 isTrainer = s.me.role?.equals("trainer", ignoreCase = true) == true
             }
             is AccountUIState.Saved -> {
@@ -163,7 +158,6 @@ fun SettingsScreen(
 
             Divider()
 
-            // ─── Motyw aplikacji ───
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Motyw aplikacji", fontWeight = FontWeight.SemiBold)
 
@@ -183,11 +177,9 @@ fun SettingsScreen(
                 
             }
 
-            // ─── Ustawienia trenera (tylko dla roli trainer) ───
             if (isTrainer) {
                 Divider()
 
-                // ViewModel tworzymy TYLKO jeśli to trener
                 val trainerVm: TrainerSettingsViewModel =
                     viewModel(factory = TrainerSettingsViewModelFactory(app))
                 val trainerState by trainerVm.state.collectAsState()
@@ -233,7 +225,6 @@ fun SettingsScreen(
 
             Divider()
 
-            // ─── Konto ───
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Konto", fontWeight = FontWeight.SemiBold)
 
@@ -278,9 +269,6 @@ fun SettingsScreen(
     }
 }
 
-/* ============================================================
-   VIEWMODEL – USTAWIENIA TRENERA
-   ============================================================ */
 
 data class TrainerSettingsUiState(
     val maxTrainees: String = "10",
@@ -309,14 +297,9 @@ class TrainerSettingsViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<TrainerSettingsUiState> = _state
 
     init {
-        // Po utworzeniu VM od razu pobierz aktualny limit z backendu
         loadCurrentLimit()
     }
 
-    /**
-     * Pobiera aktualną ofertę trenera (/api/trainers/me)
-     * i jeśli istnieje maxTrainees, ustawia go w stanie.
-     */
     private fun loadCurrentLimit() {
         viewModelScope.launch {
             try {
@@ -335,7 +318,6 @@ class TrainerSettingsViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             } catch (e: Exception) {
-                // Ignorujemy błąd przy starcie (np. gdy konto jeszcze nie ma oferty)
             }
         }
     }

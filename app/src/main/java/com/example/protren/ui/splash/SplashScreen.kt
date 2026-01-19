@@ -38,7 +38,6 @@ fun SplashScreen(navController: NavController) {
 
     LaunchedEffect(Unit) {
         val target = withContext(Dispatchers.IO) {
-            // 1) jeśli nie ma accessa → login
             val access = prefs.getAccessToken()
             val refresh = prefs.getRefreshToken()
 
@@ -46,7 +45,6 @@ fun SplashScreen(navController: NavController) {
                 return@withContext "login"
             }
 
-            // 2) jeśli access jest, ale może wygasł: spróbuj refresh
             val refreshed = if (!refresh.isNullOrBlank()) {
                 try {
                     val retrofit = ApiClient.create()
@@ -62,7 +60,6 @@ fun SplashScreen(navController: NavController) {
 
             if (!refreshed) return@withContext "login"
 
-            // 3) szybka próba /me (jeśli brak RoleApi lub padnie – pójdziemy po JWT)
             val roleFromMe: String? = withTimeoutOrNull(2500) {
                 try {
                     val retrofitAuth = ApiClient.createWithAuth(
@@ -84,7 +81,6 @@ fun SplashScreen(navController: NavController) {
             }
         }
 
-        // drobna kosmetyka
         delay(120)
 
         if (!navigated && isActive) {
@@ -122,9 +118,6 @@ fun SplashScreen(navController: NavController) {
     }
 }
 
-/**
- * Minimalne dekodowanie roli z JWT (payload) – fallback gdy /me nie działa.
- */
 private fun decodeRoleFromJwt(token: String): String? {
     return try {
         val parts = token.split(".")
@@ -134,7 +127,6 @@ private fun decodeRoleFromJwt(token: String): String? {
             payload.replace('-', '+').replace('_', '/'),
             android.util.Base64.DEFAULT
         ))
-        // prymitywnie – wystarczy
         val regex = Regex("\"role\"\\s*:\\s*\"(.*?)\"")
         regex.find(json)?.groupValues?.getOrNull(1)
     } catch (_: Exception) {

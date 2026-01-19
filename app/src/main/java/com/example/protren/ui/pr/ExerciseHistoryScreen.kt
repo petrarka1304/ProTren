@@ -109,7 +109,7 @@ fun ExerciseHistoryScreen(navController: NavController, encodedName: String) {
         }
     }
     fun formatDate(date: String?): String {
-        return date?.substring(0, 10) ?: "—"  // Zwraca tylko datę w formacie yyyy-MM-dd
+        return date?.substring(0, 10) ?: "—"
     }
 
 }

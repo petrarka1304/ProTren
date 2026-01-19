@@ -23,8 +23,8 @@ import com.example.protren.data.UserPreferences
 
 @Composable
 fun TrainerHomeScreen(
-    nav: NavHostController,      // wewnętrzna nawigacja trenera (trainerNav)
-    appNav: NavHostController     // ✅ główna nawigacja aplikacji (navController)
+    nav: NavHostController,
+    appNav: NavHostController
 ) {
     val context = LocalContext.current
     val prefs = remember { UserPreferences(context) }
@@ -124,7 +124,6 @@ fun TrainerHomeScreen(
                     askLogout = false
                     prefs.clearTokens()
 
-                    // ✅ NAJWAŻNIEJSZE: nawiguj po appNav, nie po trainerNav
                     appNav.navigate("login") {
                         popUpTo(appNav.graph.startDestinationId) { inclusive = true }
                         launchSingleTop = true

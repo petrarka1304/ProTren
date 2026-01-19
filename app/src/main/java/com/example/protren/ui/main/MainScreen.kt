@@ -41,8 +41,6 @@ fun MainScreen(modifier: Modifier = Modifier) {
 
     LaunchedEffect(Unit) { roleVm.load() }
 
-    // Jeśli wystąpi błąd potwierdzenia roli z serwera, pokaż komunikat,
-    // ale NIE zmieniaj wyglądu na „użytkownika” – jedziemy na roli z JWT.
     LaunchedEffect(error) {
         if (error != null) {
             snackbar.showSnackbar(

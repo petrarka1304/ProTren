@@ -48,7 +48,6 @@ fun SupplementEditorScreen(
     navController: NavController,
     supplementId: String?
 ) {
-    // ====== LIMITY DŁUGOŚCI (frontend guard) ======
     val MAX_SEARCH = 60
     val MAX_NAME = 60
     val MAX_DOSAGE = 60
@@ -68,7 +67,6 @@ fun SupplementEditorScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var conflictExisting by remember { mutableStateOf<Supplement?>(null) }
 
-    // ---- fallback lokalny
     val localPresets = listOf(
         "Witamina D3",
         "Magnez",
@@ -80,7 +78,6 @@ fun SupplementEditorScreen(
         "Żelazo"
     )
 
-    // ---- model na ekran
     data class CatalogUIItem(
         val name: String,
         val dosage: String? = null,
@@ -94,7 +91,6 @@ fun SupplementEditorScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
-    // formularz
     data class FormState(
         val name: String = "",
         val dosage: String = "",
@@ -121,17 +117,13 @@ fun SupplementEditorScreen(
         0 to "Nd"
     )
 
-    // ---- helpery
 
     fun normalizeCategory(raw: String?): String {
         if (raw.isNullOrBlank()) return "inne"
-        // spacje egzotyczne → zwykła
         var v = raw.replace(Regex("[\\u00A0\\u2000-\\u200B\\u202F\\u205F\\u3000]"), " ")
             .trim()
             .lowercase()
-        // jak zaczyna się od "inne" → zawsze "inne"
         if (v.startsWith("inne")) return "inne"
-        // różne warianty
         if (v == "trening/redukcja") return "trening / redukcja"
         if (v == "stawy/skóra") return "stawy / skóra"
         return v
@@ -159,7 +151,6 @@ fun SupplementEditorScreen(
         return SupplementRepository(api)
     }
 
-    // ---- 1) pobierz katalog
     LaunchedEffect(Unit) {
         val api = buildApi()
         if (api != null) {
@@ -180,13 +171,11 @@ fun SupplementEditorScreen(
                             )
                         }
                 } else {
-                    // fallback
                     catalog = localPresets.map {
                         CatalogUIItem(name = it, category = "inne")
                     }
                 }
             } catch (e: Exception) {
-                // fallback
                 catalog = localPresets.map {
                     CatalogUIItem(name = it, category = "inne")
                 }
@@ -198,7 +187,6 @@ fun SupplementEditorScreen(
         }
     }
 
-    // ---- 2) jeżeli edycja – pobierz istniejący suplement
     LaunchedEffect(supplementId) {
         if (supplementId.isNullOrBlank()) {
             initialLoad = false
@@ -240,7 +228,6 @@ fun SupplementEditorScreen(
             null
         }
 
-    // ---- ZAPIS
     fun save() {
         scope.launch {
             val err = validateForm()
@@ -268,7 +255,7 @@ fun SupplementEditorScreen(
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("supplements_changed", true)
-                    snackbar.showSnackbar("Zapisano ✅")
+                    snackbar.showSnackbar("Zapisano")
                     navController.popBackStack()
                 } else if (res.code() == 409) {
                     val msg = parseServerMsg(res) ?: "Suplement o tej nazwie już istnieje."
@@ -290,7 +277,6 @@ fun SupplementEditorScreen(
         }
     }
 
-    // ---- USUWANIE
     fun remove() {
         if (supplementId.isNullOrBlank()) return
         scope.launch {
@@ -370,7 +356,6 @@ fun SupplementEditorScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
-                // ====== 1. BAZA (nowa, prosta) ======
                 ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                     Column(
                         Modifier
@@ -395,7 +380,6 @@ fun SupplementEditorScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // kategorie do chipów
                         val categories = remember(catalog) {
                             catalog
                                 .map { normalizeCategory(it.category) }
@@ -404,7 +388,6 @@ fun SupplementEditorScreen(
                         }
                         var categoriesExpanded by remember { mutableStateOf(false) }
 
-                        // Nagłówek do klikania
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -462,7 +445,6 @@ fun SupplementEditorScreen(
                             }
                         }
 
-                        // filtrujemy dane
                         val filtered = remember(catalog, searchQuery, selectedCategory) {
                             val q = searchQuery.trim().lowercase()
                             catalog.filter { item ->
@@ -473,7 +455,6 @@ fun SupplementEditorScreen(
                             }
                         }
 
-                        // lista płaska
                         if (filtered.isEmpty()) {
                             Text(
                                 "Brak wyników.",
@@ -481,7 +462,6 @@ fun SupplementEditorScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
-                            // używamy LazyColumn wewnątrz karty – z fixed height
                             LazyColumn(
                                 Modifier
                                     .fillMaxWidth()
@@ -539,7 +519,6 @@ fun SupplementEditorScreen(
                     }
                 }
 
-                // ====== 2. DANE SUPLEMENTU ======
                 ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                     Column(
                         Modifier
@@ -609,7 +588,6 @@ fun SupplementEditorScreen(
                     }
                 }
 
-                // ====== 3. PORY DNIA ======
                 ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                     Column(
                         Modifier
@@ -639,7 +617,6 @@ fun SupplementEditorScreen(
                     }
                 }
 
-                // ====== 4. DNI TYGODNIA ======
                 ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                     Column(
                         Modifier
@@ -669,7 +646,6 @@ fun SupplementEditorScreen(
                     }
                 }
 
-                // ====== PRZYCISKI DÓŁ ======
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -699,7 +675,6 @@ fun SupplementEditorScreen(
         }
     }
 
-    // ====== dialog usuwania ======
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -714,7 +689,6 @@ fun SupplementEditorScreen(
         )
     }
 
-    // ====== dialog konfliktu ======
     conflictExisting?.let { existing ->
         AlertDialog(
             onDismissRequest = { conflictExisting = null },
@@ -742,7 +716,7 @@ fun SupplementEditorScreen(
                                 navController.previousBackStackEntry
                                     ?.savedStateHandle
                                     ?.set("supplements_changed", true)
-                                snackbar.showSnackbar("Zaktualizowano ✅")
+                                snackbar.showSnackbar("Zaktualizowano ")
                                 navController.popBackStack()
                             } else {
                                 snackbar.showSnackbar(parseServerMsg(res) ?: "Błąd zapisu")

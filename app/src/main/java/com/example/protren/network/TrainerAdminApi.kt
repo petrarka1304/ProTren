@@ -11,27 +11,23 @@ data class CoachingRequestItem(
     val traineeId: String,
     val traineeName: String,
     val message: String,
-    val createdAt: String
+    val createdAt: String,
 )
 
 data class RespondBody(val requestId: String, val accept: Boolean)
 
-/**
- * Pojedynczy podopieczny w panelu trenera.
- * Backend zwraca: userId, name, email, subscriptionActive, subscriptionUntil
- * z kontrolera listTrainees. :contentReference[oaicite:1]{index=1}
- */
 data class TraineeItem(
     val userId: String,
     val name: String,
     val email: String,
     val subscriptionActive: Boolean? = null,
-    val subscriptionUntil: String? = null
+    val subscriptionUntil: String? = null,
+    val avatarUrl: String? = null
 )
 
 data class TrainerCreatePlanRequest(
     val name: String,
-    val days: List<TrainingPlanDayDto>, // używamy DTO z TrainingPlanApi.kt
+    val days: List<TrainingPlanDayDto>,
     val isPublic: Boolean = false
 )
 

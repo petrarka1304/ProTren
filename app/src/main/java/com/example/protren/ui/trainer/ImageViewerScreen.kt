@@ -30,7 +30,6 @@ fun ImageViewerScreen(
     nav: NavController,
     startIndex: Int
 ) {
-    // pobieramy listę URL-i z poprzedniego backstack entry
     val urls = nav.previousBackStackEntry
         ?.savedStateHandle
         ?.get<ArrayList<String>>("image_urls")
@@ -85,7 +84,6 @@ fun ImageViewerScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                // prosto: jedno zdjęcie na cały ekran
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(urls[currentIndex])
@@ -97,8 +95,6 @@ fun ImageViewerScreen(
                         .fillMaxHeight(),
                     contentScale = ContentScale.Fit
                 )
-
-                // proste strzałki tekstowe do przewijania zdjęć (jeśli jest ich więcej)
                 if (urls.size > 1) {
                     Row(
                         modifier = Modifier
@@ -144,7 +140,6 @@ fun ImageViewerScreen(
     }
 }
 
-// mały helper na „kliknięcie tylko jeśli można”
 @Composable
 private fun Modifier.clickableIf(
     condition: Boolean,

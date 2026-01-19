@@ -5,10 +5,9 @@ data class Supplement(
     val name: String? = null,
     val dosage: String? = null,
     val notes: String? = null,
-    val times: List<String>? = emptyList(),        // "morning", "midday", "evening", "night"
-    val daysOfWeek: List<Int>? = emptyList(),      // 0..6 (Nd..Sb)
+    val times: List<String>? = emptyList(),
+    val daysOfWeek: List<Int>? = emptyList(),
     val takenLog: List<TakenLog>? = emptyList(),
-    // tylko w GET /supplements/today:
     val takenToday: Boolean? = null
 )
 

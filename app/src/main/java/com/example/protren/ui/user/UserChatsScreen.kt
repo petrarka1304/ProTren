@@ -84,10 +84,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
-/* ------------------------------------------------------------------
-   VIEWMODEL DO LISTY CZATÓW
-   ------------------------------------------------------------------ */
-
 class UserChatsViewModel(private val app: Application) : ViewModel() {
     private val prefs = UserPreferences(app)
     private val api by lazy {
@@ -131,9 +127,6 @@ class UserChatsViewModel(private val app: Application) : ViewModel() {
     }
 }
 
-/* ------------------------------------------------------------------
-   DTO + API dla pickera trenera (USER -> przypisany trener)
-   ------------------------------------------------------------------ */
 
 data class TrainerForUserDto(
     val userId: String,
@@ -143,14 +136,9 @@ data class TrainerForUserDto(
 )
 
 interface TrainersForUserApi {
-    // 🚩 nowy endpoint z backendu: GET /api/trainer/my
     @GET("api/trainer/my")
     suspend fun myTrainer(): Response<List<TrainerForUserDto>>
 }
-
-/* ------------------------------------------------------------------
-   EKRAN LISTY CZATÓW
-   ------------------------------------------------------------------ */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -298,9 +286,6 @@ fun UserChatsScreen(nav: NavController) {
     }
 }
 
-/* ------------------------------------------------------------------
-   RZĘD CZATU
-   ------------------------------------------------------------------ */
 
 @Composable
 private fun ChatRowCard(chat: ChatSummaryDto, onClick: () -> Unit) {
@@ -423,9 +408,6 @@ private fun initialsGradient(name: String): List<Color> {
     return listOf(c1, c2)
 }
 
-/* ------------------------------------------------------------------
-   PICKER TRENERA – zamiast wpisywania ID
-   ------------------------------------------------------------------ */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -451,7 +433,6 @@ private fun NewChatDialog(
         ).create(TrainersForUserApi::class.java)
     }
 
-    // pobieramy przypisanego trenera z backendu
     LaunchedEffect(Unit) {
         loading = true
         error = null
@@ -594,10 +575,6 @@ private fun NewChatDialog(
         }
     }
 }
-
-/* ------------------------------------------------------------------
-   STANY PUSTY / BŁĄD
-   ------------------------------------------------------------------ */
 
 @Composable
 private fun EmptyState(

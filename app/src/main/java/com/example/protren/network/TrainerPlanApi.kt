@@ -9,17 +9,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-/**
- * Wszystkie ścieżki są RELATYWNE (bez wiodącego "/").
- *
- * Trasy backendu:
- *  GET    trainer-user-supplements/{traineeId}
- *  POST   trainer-user-supplements/{traineeId}
- *  PATCH  trainer-user-supplements/{traineeId}/{id}
- *  DELETE trainer-user-supplements/{traineeId}/{id}
- *  POST   trainer-user-supplements/{traineeId}/{id}/take-today
- *  POST   trainer-user-supplements/{traineeId}/{id}/undo-today
- */
+
 interface TrainerPlanApi {
 
     @GET("api/trainer-user-supplements/{traineeId}")
@@ -27,7 +17,6 @@ interface TrainerPlanApi {
         @Path("traineeId") traineeId: String
     ): Response<List<Supplement>>
 
-    // Body jako mapka – pola: name, dosage, notes, times, daysOfWeek
     @POST("api/trainer-user-supplements/{traineeId}")
     suspend fun createSupplement(
         @Path("traineeId") traineeId: String,
@@ -47,7 +36,6 @@ interface TrainerPlanApi {
         @Path("id") id: String
     ): Response<Unit>
 
-    // ===== Akcje dnia =====
     @POST("api/trainer-user-supplements/{traineeId}/{id}/take-today")
     suspend fun takeToday(
         @Path("traineeId") traineeId: String,

@@ -73,7 +73,6 @@ fun TrainerPeriodPlanScreen(
 
     val state by vm.state.collectAsState()
 
-    // ✅ budowa po wejściu i po zmianach parametrów
     LaunchedEffect(Unit) { vm.buildCalendar(startDate, weeks, force = true) }
     LaunchedEffect(startDate, weeks) { vm.buildCalendar(startDate, weeks) }
 
@@ -127,7 +126,7 @@ fun TrainerPeriodPlanScreen(
                         start = 12.dp,
                         end = 12.dp,
                         top = padding.calculateTopPadding() + 12.dp,
-                        bottom = padding.calculateBottomPadding() + 12.dp // ✅ bez stałego +92.dp
+                        bottom = padding.calculateBottomPadding() + 12.dp
                     ),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -189,7 +188,6 @@ fun TrainerPeriodPlanScreen(
                     }
                 }
 
-                // ✅ mały zapas na koniec listy (żeby nie było “na styk”)
                 item { Spacer(Modifier.height(8.dp)) }
             }
 
@@ -242,8 +240,6 @@ fun TrainerPeriodPlanScreen(
     }
 }
 
-/* ───────────────────────── Bottom actions ───────────────────────── */
-
 @Composable
 private fun BottomActionBar(
     traineeId: String?,
@@ -251,7 +247,6 @@ private fun BottomActionBar(
     onSaveTemplate: () -> Unit,
     onAssign: () -> Unit
 ) {
-    // ✅ bez “ciemnego kloca”: nie dokładamy podwójnych paddingów, tylko insets tu
     Surface(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
@@ -260,7 +255,7 @@ private fun BottomActionBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars) // ✅ tylko raz
+                .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -291,8 +286,6 @@ private fun BottomActionBar(
         }
     }
 }
-
-/* ───────────────────────── Banner/Params ───────────────────────── */
 
 @Composable
 private fun PlanBanner(
@@ -482,8 +475,6 @@ private fun TraineeInfoOrPicker(
     }
 }
 
-/* ───────────────────────── Calendar header + grid ───────────────────────── */
-
 @Composable
 private fun WeekHeaderRow() {
     val names = remember { listOf("Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Niedz") }
@@ -622,8 +613,6 @@ private fun DaysGrid(
         }
     }
 }
-
-/* ───────────────────────── Day editor sheet ───────────────────────── */
 
 @Composable
 private fun DayEditorSheet(
@@ -826,8 +815,6 @@ private fun ExerciseRow(
         }
     }
 }
-
-/* ───────────────────────── Trainee picker sheet ───────────────────────── */
 
 @Composable
 private fun TraineePickerSheet(

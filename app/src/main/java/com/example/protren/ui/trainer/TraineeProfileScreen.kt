@@ -138,11 +138,6 @@ fun TraineeProfileScreen(
 
                 data != null -> {
                     val d = data!!
-
-                    // ✅ PRIORYTET:
-                    // 1) realne firstName+lastName
-                    // 2) name z API (ale tylko jeśli nie jest identyczne jak email)
-                    // 3) fallback: część emaila przed "@"
                     val realFullName = listOfNotNull(
                         d.firstName?.trim()?.takeIf { it.isNotBlank() },
                         d.lastName?.trim()?.takeIf { it.isNotBlank() }
@@ -242,7 +237,7 @@ fun TraineeProfileScreen(
     }
 }
 
-/* ---------------- UI helpers ---------------- */
+
 
 @Composable
 private fun TraineeHeader(

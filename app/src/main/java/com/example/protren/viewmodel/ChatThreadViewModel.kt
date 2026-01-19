@@ -68,8 +68,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
     private var typingJob: Job? = null
     private var endReached = false
     private var isLoadingMore = false
-
-    // cache key -> signed URL (żeby nie spamować /api/files/view)
     private val signedUrlCache = ConcurrentHashMap<String, String>()
 
     fun load(id: String) {
@@ -116,8 +114,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-
-    /** Doładowanie starszych wiadomości */
     fun loadMore() {
         val id = chatId ?: return
         if (isLoadingMore || endReached) return
@@ -148,7 +144,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Wyślij tekst */
     fun send(text: String, replyToId: String? = null, onDone: (Boolean) -> Unit) {
         val id = chatId ?: return onDone(false)
         viewModelScope.launch {
@@ -170,7 +165,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** USUWANIE wiadomości */
     fun delete(messageId: String, onDone: (Boolean) -> Unit = {}) {
         val id = chatId ?: return onDone(false)
         viewModelScope.launch {
@@ -188,13 +182,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Wysyłka obrazów.
-     *
-     * UWAGA: backend zwykle chce multipart name = "files".
-     * Jeśli ImageUtils.makeGalleryParts() robi name inne niż "files",
-     * to upload będzie failował -> wtedy trzeba poprawić ImageUtils.
-     */
     fun sendImages(
         uris: List<Uri>,
         replyToId: String? = null,
@@ -209,7 +196,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
                 val imageParts = ImageUtils.makeGalleryParts(app, uris)
                 if (imageParts.isEmpty()) return@launch onDone(false)
 
-// ✅ backend limituje liczbę plików → wysyłamy 1
                 val one = imageParts.first()
 
                 val meta = makeMetaBody(replyToId)
@@ -247,7 +233,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Wysyłka wideo */
     fun sendVideo(uri: Uri, replyToId: String? = null, onDone: (Boolean) -> Unit) {
         val id = chatId ?: return onDone(false)
         val app = getApplication<Application>()
@@ -270,8 +255,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
 
                 val requestBody: RequestBody = bytes.toRequestBody(mime.toMediaType())
                 val fileName = "video_${System.currentTimeMillis()}.${guessVideoExtension(mime)}"
-
-                // ✅ backend zwykle oczekuje name="files"
                 val part = MultipartBody.Part.createFormData(
                     name = "files",
                     filename = fileName,
@@ -308,7 +291,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Typing debounce */
     fun setTyping(isTyping: Boolean) {
         val id = chatId ?: return
         typingJob?.cancel()
@@ -337,8 +319,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
     fun onTypingFromOther(value: Boolean) {
         _otherTyping.value = value
     }
-
-    // ----------------- helpery -----------------
 
     private fun makeMetaBody(replyToId: String?): RequestBody {
         val json = if (replyToId != null) {

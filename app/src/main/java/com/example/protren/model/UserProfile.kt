@@ -11,7 +11,6 @@ data class UserProfile(
     val goal: String? = null,
     val gender: String? = null,
 
-    // w Mongo / JSON pole nazywa się "activityLevel"
     @SerializedName("activityLevel")
     val activityLevel: String? = null,
 
@@ -25,11 +24,9 @@ data class UserProfile(
     @SerializedName("avatar")
     val avatar: String? = null,
 
-    // 🔑 z Mongo: ObjectId trenera jako string
     @SerializedName("trainerId")
     val trainerId: String? = null,
 
-    // 🔑 status współpracy
     @SerializedName("subscriptionActive")
     val subscriptionActive: Boolean? = null,
 

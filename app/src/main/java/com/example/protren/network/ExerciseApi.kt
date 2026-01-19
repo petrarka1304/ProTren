@@ -20,13 +20,13 @@ data class ExercisePageDto(
     val items: List<ExerciseDto>
 )
 
-/** Zgrupowane nazwy grup mięśniowych (do filtrów). */
+/** Zgrupowane nazwy grup mięśniowych. */
 data class GroupDto(
     val name: String,
     val count: Int
 )
 
-/** Dodawanie własnego ćwiczenia (opcjonalnie). */
+/** Dodawanie własnego ćwiczenia. */
 data class CreateExerciseRequest(
     val name: String,
     val group: String? = null,
@@ -36,7 +36,7 @@ data class CreateExerciseRequest(
 
 interface ExerciseApi {
 
-    /** Lista ćwiczeń z paginacją i filtrami. */
+    /** Lista ćwiczeń */
     @GET("api/exercises")
     suspend fun getExercises(
         @Query("query") query: String? = null,

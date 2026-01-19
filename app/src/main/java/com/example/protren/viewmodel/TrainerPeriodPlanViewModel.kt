@@ -71,11 +71,6 @@ class TrainerPeriodPlanViewModel(app: Application) : AndroidViewModel(app) {
         buildCalendar(defaultStart, defaultWeeks, force = true)
     }
 
-    /**
-     * ✅ Stabilna budowa kalendarza:
-     * - pełne tygodnie
-     * - start siatki = poniedziałek tygodnia startDate
-     */
     fun buildCalendar(startDate: LocalDate, weeks: Int, force: Boolean = false) {
         val safeWeeks = weeks.coerceIn(1, 26)
         val current = _state.value

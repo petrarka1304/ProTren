@@ -64,7 +64,7 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/") // ten sam adres co w TrainerRoot
+            .baseUrl("https://protren-backend.onrender.com/")
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()
@@ -94,15 +94,12 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
                         _state.value = PlanEditorState.Error("Brak danych planu")
                     }
 
-                // 🔥 TU JEST GŁÓWNA ZMIANA:
-                // zamiast tylko liczyć ćwiczenia, budujemy pełną listę ExerciseUi,
-                // żeby ekran mógł wyświetlać nazwy + edytować serie/powtórzenia/ciężar.
                 val daysUi = dto.days.map { day ->
                     val exercisesUi = (day.exercises ?: emptyList()).mapIndexed { idx, ex ->
                         ExerciseUi(
-                            id = idx.toString(), // ID nie jest używane przy zapisie, więc może być lokalne
+                            id = idx.toString(),
                             name = ex.name ?: "Ćwiczenie ${idx + 1}",
-                            sets = 3,            // domyślnie; backend i tak dostaje wartości z ExerciseUi
+                            sets = 3,
                             reps = 10,
                             weight = 0f
                         )
@@ -155,10 +152,6 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = current.copy(days = list)
     }
 
-    /**
-     * Wywoływane po powrocie z ExercisePickerScreen – ustawiamy listę ćwiczeń
-     * z domyślnymi wartościami serii/powtórzeń/ciężaru.
-     */
     fun setExercisesForDay(index: Int, ids: List<String>, names: List<String>) {
         val current = _state.value as? PlanEditorState.Loaded ?: return
         if (index !in current.days.indices) return
@@ -181,9 +174,6 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = current.copy(days = list)
     }
 
-    /**
-     * Aktualizacja pojedynczego ćwiczenia w danym dniu (np. zmiana serii, powtórzeń, ciężaru).
-     */
     fun updateExerciseInDay(dayIndex: Int, exIndex: Int, updated: ExerciseUi) {
         val current = _state.value as? PlanEditorState.Loaded ?: return
         if (dayIndex !in current.days.indices) return

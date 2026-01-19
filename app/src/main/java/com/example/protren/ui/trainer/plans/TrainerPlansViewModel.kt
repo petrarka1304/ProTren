@@ -15,7 +15,7 @@ data class TrainerSuppUiState(
     val traineeId: String? = null,
     val items: List<Supplement> = emptyList(),
     val editorVisible: Boolean = false,
-    val editorInitial: Supplement? = null, // null => nowy
+    val editorInitial: Supplement? = null,
 )
 
 class TrainerPlansViewModel(
@@ -36,7 +36,7 @@ class TrainerPlansViewModel(
         viewModelScope.launch {
             _ui.value = _ui.value.copy(isLoading = true, error = null)
             try {
-                val res = api.listSupplements(traineeId) // bez nazwanych parametrów
+                val res = api.listSupplements(traineeId)
                 if (res.isSuccessful) {
                     _ui.value = _ui.value.copy(isLoading = false, items = res.body().orEmpty())
                 } else {
@@ -70,7 +70,6 @@ class TrainerPlansViewModel(
         val traineeId = _ui.value.traineeId ?: return
         val editing = _ui.value.editorInitial
 
-        // prosty, odporny na zmiany payload – dokładnie to, czego oczekuje backend
         val payload: Map<String, Any?> = mapOf(
             "name" to name.trim(),
             "dosage" to (dosage?.trim().orEmpty()),
@@ -83,10 +82,8 @@ class TrainerPlansViewModel(
             _ui.value = _ui.value.copy(isLoading = true, error = null)
             try {
                 val res = if (editing == null) {
-                    // CREATE
                     api.createSupplement(traineeId, payload)
                 } else {
-                    // UPDATE — wymagany nie-nullowy id
                     val sid = editing._id ?: return@launch run {
                         _ui.value = _ui.value.copy(isLoading = false, error = "Brak ID suplementu")
                     }

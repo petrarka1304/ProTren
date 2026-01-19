@@ -16,12 +16,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.protren.data.ExerciseRepository
+
 import com.example.protren.data.UserPreferences
 import com.example.protren.logic.*
 import com.example.protren.network.ApiClient
 import com.example.protren.network.ExerciseApi
 import com.example.protren.network.TrainingPlanApi
+import com.example.protren.repository.ExerciseRepository
 import com.example.protren.viewmodel.AutoPlanViewModel
 import com.example.protren.viewmodel.AutoPlanVmFactory
 import kotlinx.coroutines.launch
@@ -73,7 +74,6 @@ fun AutoPlanScreen(navController: NavHostController) {
     }
 }
 
-/* ================= CONTENT ================= */
 
 @Composable
 private fun AutoPlanContent(vm: AutoPlanViewModel, padding: PaddingValues) {
@@ -117,8 +117,6 @@ private fun AutoPlanContent(vm: AutoPlanViewModel, padding: PaddingValues) {
     }
 }
 
-/* ================= HEADER ================= */
-
 @Composable
 private fun Header() {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -133,8 +131,6 @@ private fun Header() {
         )
     }
 }
-
-/* ================= CONFIG ================= */
 
 @Composable
 private fun ConfigSection(
@@ -158,8 +154,6 @@ private fun ConfigSection(
     }
 }
 
-/* ================= PICKERS ================= */
-
 @Composable
 private fun LevelPicker(opt: GenerationOptions, onChange: (GenerationOptions) -> Unit) {
     SegmentedEqual(
@@ -175,7 +169,6 @@ private fun LevelPicker(opt: GenerationOptions, onChange: (GenerationOptions) ->
 
 @Composable
 private fun GoalPicker(opt: GenerationOptions, onChange: (GenerationOptions) -> Unit) {
-    // ✅ wszystkie równe: maxLines=1 + elipsa + stała wysokość
     SegmentedEqual(
         label = "Cel planu",
         value = opt.goal,
@@ -220,7 +213,6 @@ private fun PlanTypePicker(
     ) { onChange(opt.copy(type = it)) }
 }
 
-/* ================= SEGMENTED (RÓWNE) ================= */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -250,7 +242,7 @@ private fun <T> SegmentedEqual(
                     Text(
                         text = text,
                         textAlign = TextAlign.Center,
-                        maxLines = 1,                 // ✅ nie rozpycha w pionie
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -259,8 +251,6 @@ private fun <T> SegmentedEqual(
         }
     }
 }
-
-/* ================= SLIDERS ================= */
 
 @Composable
 private fun DaysSlider(opt: GenerationOptions, onChange: (GenerationOptions) -> Unit) {
@@ -288,8 +278,6 @@ private fun WeeksSlider(opt: GenerationOptions, onChange: (GenerationOptions) ->
     }
 }
 
-/* ================= PLAN ================= */
-
 @Composable
 private fun PlanTimeline(plan: GeneratedPlan) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -316,8 +304,6 @@ private fun PlanTimeline(plan: GeneratedPlan) {
         }
     }
 }
-
-/* ================= BOTTOM ================= */
 
 @Composable
 private fun BottomActionBar(
@@ -370,8 +356,6 @@ private fun BottomActionBar(
         }
     }
 }
-
-/* ================= STATES ================= */
 
 @Composable
 private fun CenterLoader(padding: PaddingValues) {

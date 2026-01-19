@@ -203,7 +203,6 @@ fun PurchaseTrainerScreen(
                         Button(
                             onClick = {
                                 scope.launch {
-                                    // dodatkowa blokada po stronie UI
                                     val tLocal = trainer
                                     if (tLocal != null) {
                                         val c = tLocal.traineesCount ?: 0

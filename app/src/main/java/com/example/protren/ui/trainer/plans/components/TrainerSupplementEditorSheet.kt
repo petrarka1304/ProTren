@@ -26,16 +26,11 @@ import com.example.protren.model.SupplementCatalogItem
 import com.example.protren.network.SupplementApi
 import kotlinx.coroutines.launch
 
-/**
- * Dolny arkusz edycji/dodawania suplementu po stronie trenera.
- * - Pobiera katalog z bazy przez SupplementApi.getCatalog()
- * - Pozwala wyszukać/wybrać pozycję i wypełnia pola formularza jak u użytkownika.
- */
 @Composable
 fun TrainerSupplementEditorSheet(
     visible: Boolean,
     initial: Supplement?,
-    supplementApi: SupplementApi, // <— API do katalogu
+    supplementApi: SupplementApi,
     onDismiss: () -> Unit,
     onSubmit: (
         name: String,
@@ -50,7 +45,6 @@ fun TrainerSupplementEditorSheet(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
 
-    // ===== KATALOG Z BAZY =====
     data class CatalogUIItem(
         val name: String,
         val dosage: String? = null,
@@ -74,7 +68,6 @@ fun TrainerSupplementEditorSheet(
     var catalog by remember { mutableStateOf<List<CatalogUIItem>>(emptyList()) }
     var loadingCatalog by remember { mutableStateOf(true) }
 
-    // fallback (jak u użytkownika)
     val localPresets = listOf(
         "Witamina D3", "Magnez", "Omega-3", "Witamina C",
         "Multiwitamina", "Kreatyna", "Witamina B12", "Żelazo"
@@ -106,7 +99,6 @@ fun TrainerSupplementEditorSheet(
         loadingCatalog = false
     }
 
-    // ===== FORMULARZ (jak u użytkownika) =====
     var name by remember(initial) { mutableStateOf(TextFieldValue(initial?.name ?: "")) }
     var dosage by remember(initial) { mutableStateOf(TextFieldValue(initial?.dosage ?: "")) }
     var notes by remember(initial) { mutableStateOf(TextFieldValue(initial?.notes ?: "")) }
@@ -142,7 +134,6 @@ fun TrainerSupplementEditorSheet(
                 modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
             )
 
-            // ====== BAZA (taka jak u użytkownika) ======
             ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                 Column(
                     Modifier
@@ -272,7 +263,6 @@ fun TrainerSupplementEditorSheet(
                 }
             }
 
-            // ====== DANE SUPLEMENTU ======
             ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                 Column(
                     Modifier
@@ -309,7 +299,6 @@ fun TrainerSupplementEditorSheet(
                 }
             }
 
-            // ====== PORY DNIA ======
             ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                 Column(
                     Modifier
@@ -346,7 +335,6 @@ fun TrainerSupplementEditorSheet(
                 }
             }
 
-            // ====== DNI TYGODNIA ======
             ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                 Column(
                     Modifier
@@ -381,7 +369,6 @@ fun TrainerSupplementEditorSheet(
                 }
             }
 
-            // ====== PRZYCISKI ======
             Row(
                 Modifier
                     .fillMaxWidth()

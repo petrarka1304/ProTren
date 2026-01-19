@@ -1,5 +1,6 @@
 package com.example.protren.network
 
+import com.example.protren.api.TokenInterceptor
 import com.example.protren.auth.AuthBus
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -16,15 +17,11 @@ object ApiClient {
     private const val BASE_URL = "https://protren-backend.onrender.com/"
     private const val REFRESH_TIMEOUT_MS = 3000L
 
-    /** Interceptor, który globalnie:
-     *  - łapie wyjątki sieciowe i wysyła komunikat do ErrorBus
-     *  - dla HTTP 4xx/5xx (poza 401) wysyła komunikat do ErrorBus
-     */
     private val globalErrorInterceptor = Interceptor { chain ->
         try {
             val response = chain.proceed(chain.request())
 
-            // 401 obsługujemy osobno (AuthBus + dialog), więc tutaj nie spamujemy snackbarami
+
             if (!response.isSuccessful && response.code != 401) {
                 val body = try { response.peekBody(4096).string() } catch (_: Throwable) { null }
                 ErrorBus.emit(ErrorMapper.fromHttp(response.code, body))
@@ -32,13 +29,11 @@ object ApiClient {
 
             response
         } catch (t: Throwable) {
-            // Błąd sieciowy (brak neta, timeout itp.)
             ErrorBus.emit(ErrorMapper.fromNetwork(t))
             throw t
         }
     }
 
-    /** Retrofit bez autoryzacji */
     fun create(): Retrofit {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -75,7 +70,7 @@ object ApiClient {
 
             if (resp.code != 401) return@Interceptor resp
 
-            // brak refreshu => natychmiast wygaszenie sesji
+            // brak refreshu- natychmiast wygaszenie sesji
             if (refreshTokenProvider == null || onTokensUpdated == null) {
                 resp.close()
                 onUnauthorized?.invoke()
@@ -83,7 +78,6 @@ object ApiClient {
                 return@Interceptor resp
             }
 
-            // jeżeli refresh już trwa, spróbuj raz z aktualnym tokenem
             if (!refreshInProgress.compareAndSet(false, true)) {
                 resp.close()
                 return@Interceptor retryOnceWithCurrentToken(chain, originalReq, tokenProvider)
@@ -91,7 +85,6 @@ object ApiClient {
 
             try {
                 synchronized(mutex) {
-                    // spróbuj ponowić z obecnym tokenem (może już się odświeżył)
                     resp.close()
                     val tryAgain = retryOnceWithCurrentToken(chain, originalReq, tokenProvider)
                     if (tryAgain.code != 401) return@Interceptor tryAgain
@@ -135,7 +128,6 @@ object ApiClient {
                         return@Interceptor chain.proceed(retried)
                     }
 
-                    // refresh nieudany
                     onUnauthorized?.invoke()
                     try { AuthBus.emitLoggedOut("Sesja wygasła. Zaloguj się ponownie.") } catch (_: Throwable) {}
                     return@Interceptor chain.proceed(originalReq)

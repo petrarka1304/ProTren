@@ -36,7 +36,6 @@ class AnalyticsViewModel(app: Application) : AndroidViewModel(app) {
     fun setRange(newRange: AnalyticsRange) {
         if (_range.value != newRange) {
             _range.value = newRange
-            // 🔹 po zmianie zakresu od razu pobieramy dane dla nowego "days"
             viewModelScope.launch { fetch() }
         }
     }
@@ -61,7 +60,6 @@ class AnalyticsViewModel(app: Application) : AndroidViewModel(app) {
 
             val currentRange = _range.value
 
-            // 🔹 zamiast stałego weekly – używamy nowego endpointu z parametrem days
             val res = withContext(Dispatchers.IO) {
                 api.getSummaryByDays(currentRange.days)
             }

@@ -106,8 +106,6 @@ fun TrainerPublicProfileScreen(
     }
 }
 
-/* ----------------------------- LAYOUT PROFILU ----------------------------- */
-
 @Composable
 fun ProfileContent(
     trainer: Trainer,
@@ -133,7 +131,6 @@ fun ProfileContent(
             .verticalScroll(scroll)
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        // 1) banner
         Box(
             Modifier
                 .fillMaxWidth()
@@ -148,7 +145,6 @@ fun ProfileContent(
                 )
         )
 
-        // 2) “Hero card”
         ElevatedCard(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
@@ -162,7 +158,6 @@ fun ProfileContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Avatar
                     Box(
                         modifier = Modifier
                             .size(96.dp)
@@ -253,7 +248,6 @@ fun ProfileContent(
 
         Spacer(Modifier.height(2.dp))
 
-        // 3) Specjalizacje
         if (specs.isNotEmpty()) {
             SectionCard(
                 icon = Icons.Filled.Tag,
@@ -270,7 +264,6 @@ fun ProfileContent(
             }
         }
 
-        // 4) Cennik
         price?.let { p ->
             SectionCard(
                 icon = Icons.Filled.LocalOffer,
@@ -284,7 +277,6 @@ fun ProfileContent(
             }
         }
 
-        // 5) Bio
         SectionCard(
             icon = Icons.Filled.Info,
             title = "O trenerze"
@@ -295,7 +287,6 @@ fun ProfileContent(
             )
         }
 
-        // 6) Portfolio (jeśli są zdjęcia)
         if (galleryUrls.isNotEmpty()) {
             SectionCard(
                 icon = Icons.Filled.Photo,
@@ -332,7 +323,6 @@ fun ProfileContent(
             }
         }
 
-        // 7) Opinie
         SectionCard(
             icon = Icons.Filled.Star,
             title = "Opinie podopiecznych"
@@ -487,6 +477,5 @@ private fun resolveImageUrl(raw: String?): String? {
     if (v.startsWith("http://", true) || v.startsWith("https://", true)) {
         return v
     }
-    // Upewnij się, że stała BACKEND_BASE_URL jest zdefiniowana w tym pliku tak samo
     return BACKEND_BASE_URL.trimEnd('/') + "/" + v.trimStart('/')
 }

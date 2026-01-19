@@ -13,13 +13,11 @@ object ErrorBus {
 
         val lower = msg.lowercase()
 
-        // ✅ Nie pokazuj snackbarów dla komunikatów o wylogowaniu/sesji
         if (lower.contains("sesja wygasła") ||
             lower.contains("zaloguj się ponownie") ||
             lower.contains("wylogow")
         ) return
 
-        // ✅ Nie pokazuj snackbarów dla "brak dzisiejszego treningu" (to nie błąd)
         if (lower.contains("brak dzisiejszego treningu") ||
             lower.contains("brak treningu na dziś") ||
             lower.contains("nie masz dzisiaj treningu")

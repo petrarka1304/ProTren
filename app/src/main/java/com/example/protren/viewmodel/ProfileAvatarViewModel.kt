@@ -48,15 +48,6 @@ class ProfileAvatarViewModel(app: Application) : AndroidViewModel(app) {
     private val _avatarUrl = MutableStateFlow<String?>(null)
     val avatarUrl: StateFlow<String?> = _avatarUrl
 
-    /**
-     * Upload avatara pod Cloudflare R2.
-     * Backend może zwrócić:
-     * - avatarUrl (rzadziej / opcjonalnie)
-     * - avatarKey (najczęściej)
-     * - profile (czasem; profil może mieć już avatar url lub key)
-     *
-     * Docelowo zawsze ustawiamy _avatarUrl na SIGNED URL (żeby Coil/AsyncImage działał).
-     */
     fun upload(uri: Uri, onDone: (Boolean, String?) -> Unit = { _, _ -> }) {
         val app = getApplication<Application>()
 
@@ -83,7 +74,6 @@ class ProfileAvatarViewModel(app: Application) : AndroidViewModel(app) {
 
                 val body: AvatarUploadResponse? = resp.body()
 
-                // 1) jeśli backend zwróci avatarUrl -> użyj
                 val directUrl = body?.avatarUrl
                 if (!directUrl.isNullOrBlank()) {
                     _avatarUrl.value = directUrl
@@ -91,7 +81,6 @@ class ProfileAvatarViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
 
-                // 2) jeśli backend zwróci profil i avatar jest już pełnym URL (lub backend zwraca już signed)
                 val profileAvatar = body?.profile?.avatar
                 if (!profileAvatar.isNullOrBlank() && looksLikeUrl(profileAvatar)) {
                     _avatarUrl.value = profileAvatar
@@ -99,8 +88,7 @@ class ProfileAvatarViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
 
-                // 3) jeśli mamy avatarKey -> spróbuj rozwiązać na signed URL przez /api/files/view
-                val key = body?.avatarKey ?: body?.profile?.avatar // czasem profil trzyma key w polu avatar
+                val key = body?.avatarKey ?: body?.profile?.avatar
                 if (!key.isNullOrBlank() && !looksLikeUrl(key)) {
                     val view = api.viewFile(key)
                     if (view.isSuccessful) {
@@ -113,7 +101,6 @@ class ProfileAvatarViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
 
-                // 4) fallback: pobierz profil (backend u Ciebie podpisuje avatar na GET /api/profile)
                 val refreshed = api.getProfile()
                 if (refreshed.isSuccessful) {
                     val refreshedAvatar = refreshed.body()?.avatar
@@ -132,8 +119,6 @@ class ProfileAvatarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-
-    // --- helpers ---
 
     private fun makeImagePart(cr: ContentResolver, uri: Uri, partName: String): MultipartBody.Part {
         val name = queryDisplayName(cr, uri) ?: "avatar.jpg"

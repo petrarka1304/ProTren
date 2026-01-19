@@ -60,7 +60,6 @@ fun AddReviewScreen(
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    // Sekcja oceny
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -71,7 +70,6 @@ fun AddReviewScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
 
-                        // Gwiazdki – używamy istniejącego komponentu
                         RatingStars(rating.toInt())
 
                         Slider(
@@ -96,7 +94,6 @@ fun AddReviewScreen(
                         )
                     }
 
-                    // Komentarz
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "Komentarz (opcjonalnie)",
@@ -121,7 +118,6 @@ fun AddReviewScreen(
                         )
                     }
 
-                    // Przyciski akcji
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -167,7 +163,6 @@ fun AddReviewScreen(
                 }
             }
 
-            // Delikatne przyciemnienie i loader na środku, gdy zapisujemy
             if (loading) {
                 Box(
                     modifier = Modifier

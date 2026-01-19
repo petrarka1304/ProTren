@@ -89,8 +89,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
-
-    /** Ręczne przeliczenie bez zapisywania profilu. */
     fun calculateNow(profile: UserProfile) {
         viewModelScope.launch {
             _state.value = ProfileUIState.Loading
@@ -118,7 +116,6 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // helper
     private fun Response<*>.errorMsg(): String {
         return try {
             val body = errorBody()?.string()

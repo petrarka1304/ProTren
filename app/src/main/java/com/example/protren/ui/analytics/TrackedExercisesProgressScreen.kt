@@ -93,7 +93,6 @@ fun TrackedExercisesProgressScreen(navController: NavController) {
 
     LaunchedEffect(Unit) { load() }
 
-    // odśwież listę śledzonych (gdy user wróci i zmieni listę)
     LaunchedEffect(Unit) {
         tracked = prefs.getTrackedExercises()
         if (selectedExercise == null) selectedExercise = tracked.firstOrNull()
@@ -170,8 +169,6 @@ fun TrackedExercisesProgressScreen(navController: NavController) {
         }
     }
 }
-
-/* ---------------- UI ---------------- */
 
 @Composable
 private fun ExerciseDropdown(items: List<String>, selected: String, onPick: (String) -> Unit) {
@@ -278,14 +275,6 @@ private fun ChartCard(points: List<DayPoint>, height: Dp, metric: Metric) {
     }
 }
 
-/**
- * Ładniejszy trend:
- * - skala Y z marginesem (żeby linia nie „kleiła się” do krawędzi)
- * - wygładzona linia (quadratic Bézier)
- * - delikatne wypełnienie gradientem
- * - podpisy START / TERAZ (wartości)
- * - większy punkt TERAZ
- */
 @Composable
 private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
     val anim by animateFloatAsState(1f, label = "trendIntro")
@@ -305,7 +294,6 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
         )
     }
 
-    // Paint do tekstu (nativeCanvas)
     val labelPaint = remember(textColor) {
         Paint().apply {
             color = textColor
@@ -314,7 +302,6 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
         }
     }
 
-    // Skala Y z marginesem (klucz do czytelności!)
     val rawMax = points.maxOfOrNull { it.value } ?: 1f
     val rawMin = points.minOfOrNull { it.value } ?: 0f
     val range = (rawMax - rawMin).coerceAtLeast(1f)
@@ -327,7 +314,6 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
             .height(height)
             .padding(horizontal = 6.dp, vertical = 6.dp)
     ) {
-        // siatka
         repeat(3) { i ->
             val y = size.height * (i + 1) / 4f
             drawLine(
@@ -341,12 +327,10 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
         val n = points.size
         val stepX = if (n <= 1) 0f else size.width / (n - 1)
 
-        // koordynaty
         val coords = ArrayList<Offset>(n)
         points.forEachIndexed { i, p ->
             val x = stepX * i
 
-            // normalizacja w (paddedMin..paddedMax)
             val norm = ((p.value - paddedMin) / (paddedMax - paddedMin)).coerceIn(0f, 1f)
             val y = size.height - (norm * size.height * anim)
 
@@ -373,7 +357,6 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
             coords.drop(1).forEach { lineTo(it.x, it.y) }
         }
 
-        // wypełnienie
         val fillPath = Path().apply {
             addPath(linePath)
             lineTo(coords.last().x, size.height)
@@ -382,14 +365,12 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
         }
         drawPath(path = fillPath, brush = fillBrush)
 
-        // linia
         drawPath(
             path = linePath,
             color = lineColor,
             style = Stroke(width = 4f, cap = StrokeCap.Round)
         )
 
-        // punkty (większy TERAZ)
         val stride = (coords.size / 8).coerceAtLeast(1)
         coords.forEachIndexed { idx, o ->
             val isFirst = idx == 0
@@ -399,13 +380,11 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
 
             val r = if (isLast) 6.6f else 4.8f
 
-            // halo
             drawCircle(
                 color = surfaceColor,
                 radius = r + 2.2f,
                 center = o
             )
-            // punkt
             drawCircle(
                 color = lineColor,
                 radius = r,
@@ -413,11 +392,9 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
             )
         }
 
-        // Podpisy START / TERAZ (tylko jeśli mamy >0 punktów)
         val startValue = "${points.first().value.toInt()} kg"
         val endValue = "${points.last().value.toInt()} kg"
 
-        // START: lekko na prawo
         drawContext.canvas.nativeCanvas.drawText(
             startValue,
             coords.first().x + 10f,
@@ -425,7 +402,6 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
             labelPaint
         )
 
-        // TERAZ: lekko w lewo (żeby nie uciąć)
         val endX = (coords.last().x - 110f).coerceAtLeast(0f)
         drawContext.canvas.nativeCanvas.drawText(
             endValue,
@@ -436,7 +412,6 @@ private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
     }
 }
 
-/* ---------------- Logika ---------------- */
 
 private fun buildLast30DaysPoints(
     logs: List<WorkoutLog>,
@@ -448,7 +423,6 @@ private fun buildLast30DaysPoints(
     val end = LocalDate.now()
     val start = end.minusDays(29)
 
-    // dzienny MAX
     val map = mutableMapOf<LocalDate, Float>()
 
     logs.forEach { w ->
@@ -477,7 +451,6 @@ private fun buildLast30DaysPoints(
             }
     }
 
-    // zakres 30 dni, ale wykres pokazuje tylko dni z wartością > 0
     return (0..29).map { i ->
         val d = start.plusDays(i.toLong())
         DayPoint(d, map[d] ?: 0f)

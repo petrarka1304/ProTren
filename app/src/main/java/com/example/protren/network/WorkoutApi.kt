@@ -62,7 +62,6 @@ interface WorkoutApi {
     @DELETE("api/workouts/{id}")
     suspend fun deleteWorkout(@Path("id") id: String): Response<Unit>
 
-    // ✅ Nowy endpoint — dzisiejszy trening
     @GET("api/workouts/today")
     suspend fun getTodayWorkout(): Response<WorkoutLog>
 

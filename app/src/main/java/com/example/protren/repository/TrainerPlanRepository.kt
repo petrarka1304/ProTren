@@ -3,27 +3,16 @@ package com.example.protren.repository
 import com.example.protren.model.Supplement
 import com.example.protren.network.TrainerPlanApi
 
-/**
- * Repozytorium do suplementów użytkownika po stronie trenera.
- * Zgodne z TrainerPlanApi:
- *  - list:    GET trainer-user-supplements/{traineeId}
- *  - create:  POST trainer-user-supplements/{traineeId}           (Body: Map)
- *  - update:  PATCH trainer-user-supplements/{traineeId}/{id}      (Body: Map)
- *  - delete:  DELETE trainer-user-supplements/{traineeId}/{id}
- *  - take:    POST trainer-user-supplements/{traineeId}/{id}/take-today
- *  - undo:    POST trainer-user-supplements/{traineeId}/{id}/undo-today
- */
+
 class TrainerPlanRepository(
     private val api: TrainerPlanApi
 ) {
-    // ===== LISTA / ODCZYT =====
     suspend fun listSupplements(traineeId: String): List<Supplement> {
         val resp = api.listSupplements(traineeId)
         if (resp.isSuccessful) return resp.body().orEmpty()
         throw RuntimeException("HTTP ${resp.code()}: nie można pobrać suplementów")
     }
 
-    // ===== CREATE / UPDATE / DELETE =====
     suspend fun createSupplement(
         traineeId: String,
         body: Map<String, @JvmSuppressWildcards Any?>
@@ -48,7 +37,6 @@ class TrainerPlanRepository(
         if (!resp.isSuccessful) throw RuntimeException("HTTP ${resp.code()}: błąd usuwania suplementu")
     }
 
-    // ===== AKCJE DNIA =====
     suspend fun takeToday(traineeId: String, id: String): Supplement {
         val resp = api.takeToday(traineeId, id)
         if (resp.isSuccessful) return resp.body() ?: error("Brak danych w odpowiedzi TAKE")

@@ -87,7 +87,6 @@ fun PlanDetailsScreen(
                 },
                 title = { Text(plan?.name ?: "Mój plan") },
                 actions = {
-                    // ✏️ otwiera ekran edycji planu
                     IconButton(onClick = { navController.navigate("planEditor/$planId") }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edytuj plan")
                     }
@@ -234,7 +233,6 @@ private fun DayCard(
             Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Nagłówek dnia + podsumowanie
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

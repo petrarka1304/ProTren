@@ -12,22 +12,12 @@ import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
 
-/** Body do wysłania prośby o współpracę (kiedyś) – teraz już nieużywane w nowym flow */
 data class CoachingRequestBody(
     val trainerId: String,
     val message: String? = null
 )
 
-/**
- * DTO do zapisu oferty trenera w panelu trenera.
- *
- * Pola:
- *  - name, bio, specialties, priceMonth, avatarUrl – podstawowe info o ofercie
- *  - galleryUrls – ewentualne dodatkowe zdjęcia (używane w TrainerOfferViewModel)
- *  - email – opcjonalny e-mail kontaktowy trenera (też używany w ViewModelu)
- *
- * Backend przyjmuje te pola w kontrolerze upsertMyOffer.
- */
+
 data class TrainerUpsertRequest(
     val name: String,
     val bio: String,
@@ -38,7 +28,6 @@ data class TrainerUpsertRequest(
     val email: String? = null
 )
 
-/** Odpowiedź z zakupu trenera (symulacja backendu) */
 data class PurchaseTrainerResponse(
     @SerializedName("trainerId") val trainerId: String,
     @SerializedName("trainerUserId") val trainerUserId: String,
@@ -47,22 +36,18 @@ data class PurchaseTrainerResponse(
     @SerializedName("msg") val msg: String? = null
 )
 
-/** Odpowiedź z uploadu avatara */
 data class FileUploadResponse(
     val url: String
 )
 
-/** Odpowiedź z uploadu galerii */
 data class GalleryUploadResponse(
     val urls: List<String> = emptyList()
 )
 
-/** Body do ustawiania limitu podopiecznych */
 data class TrainerSettingsRequest(
     val maxTrainees: Int
 )
 
-/** Odpowiedź z endpointu ustawień trenera */
 data class TrainerSettingsResponse(
     val ok: Boolean,
     val maxTrainees: Int
@@ -70,7 +55,7 @@ data class TrainerSettingsResponse(
 
 interface TrainerApi {
 
-    // ───────── PUBLIC ─────────
+    //PUBLIC
     @GET("api/trainers")
     suspend fun listTrainers(): Response<List<Trainer>>
 
@@ -78,7 +63,7 @@ interface TrainerApi {
     suspend fun getTrainer(@Path("id") id: String): Response<Trainer>
 
 
-    // ───────── TRENER: własna oferta ─────────
+    //TRENER: własna oferta
     @GET("api/trainers/me")
     suspend fun getMyOffer(): Response<Trainer>
 
@@ -86,19 +71,19 @@ interface TrainerApi {
     suspend fun upsertMyOffer(@Body body: TrainerUpsertRequest): Response<Trainer>
 
 
-    // ───────── UŻYTKOWNIK: wykupienie współpracy z trenerem ─────────
+    //UŻYTKOWNIK: wykupienie współpracy z trenerem
     @POST("api/trainers/{id}/purchase")
     suspend fun purchaseTrainer(@Path("id") id: String): Response<PurchaseTrainerResponse>
 
 
-    // ───────── USTAWIENIA TRENERA (LIMIT PODOPIECZNYCH) ─────────
+    //USTAWIENIA TRENERA
     @PUT("api/trainers/me/settings")
     suspend fun updateTrainerSettings(
         @Body body: TrainerSettingsRequest
     ): Response<TrainerSettingsResponse>
 
 
-    // ───────── UPLOAD ZDJĘĆ OFERTY TRENERA ─────────
+    //UPLOAD ZDJĘĆ OFERTY TRENERA
 
     @Multipart
     @POST("api/trainers/me/avatar")

@@ -55,6 +55,7 @@ import androidx.compose.foundation.layout.ColumnScope
 
 private const val IMAGE_BASE_URL = "https://protren-backend.onrender.com/"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrainerOfferScreen(
     nav: NavHostController,
@@ -173,7 +174,6 @@ fun TrainerOfferScreen(
                             )
                     )
 
-                    // 1) AVATAR + PORTFOLIO
                     AvatarCard(
                         currentUrl = form.avatarUrl,
                         pickedUri = avatarUri,
@@ -197,7 +197,6 @@ fun TrainerOfferScreen(
                         }
                     )
 
-                    // 2) DANE PODSTAWOWE
                     SectionCard(icon = Icons.Outlined.Badge, title = "Dane podstawowe") {
                         OutlinedTextField(
                             value = form.name.orEmpty(),
@@ -257,7 +256,6 @@ fun TrainerOfferScreen(
                         )
                     }
 
-                    // 3) SPECJALIZACJE
                     SectionCard(icon = Icons.Outlined.Sell, title = "Specjalizacje") {
                         val all = listOf(
                             "Redukcja", "Masa", "Siła", "Mobilność",
@@ -300,7 +298,6 @@ fun TrainerOfferScreen(
                         )
                     }
 
-                    // 4) CENNIK + widoczność
                     SectionCard(icon = Icons.Outlined.Sell, title = "Cennik") {
                         val priceText = form.priceMonth?.let { p ->
                             if (p == 0.0) "" else p.toInt().toString()
@@ -380,7 +377,7 @@ fun TrainerOfferScreen(
                                                     uploading = false
                                                 }
                                                 snackbar.showSnackbar(
-                                                    if (ok) "Zapisano ✅" else "Nie udało się zapisać"
+                                                    if (ok) "Zapisano " else "Nie udało się zapisać"
                                                 )
                                                 if (ok) nav.navigateUp()
                                             }
@@ -400,7 +397,7 @@ fun TrainerOfferScreen(
     }
 }
 
-/* ============================ HELPERY UI ============================ */
+
 
 @Composable
 private fun AvatarCard(
@@ -475,7 +472,6 @@ private fun PortfolioCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // już zapisane w backendzie (tylko podgląd)
             existingUrls.forEach { raw ->
                 val url = if (raw.startsWith("http", true)) {
                     raw
@@ -506,7 +502,6 @@ private fun PortfolioCard(
                 }
             }
 
-            // nowe, wybrane lokalnie – można usuwać
             uris.forEachIndexed { i, uri ->
                 Box(
                     modifier = Modifier
@@ -548,7 +543,6 @@ private fun PortfolioCard(
     }
 }
 
-/* helper na kartę sekcji */
 @Composable
 private fun SectionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -575,7 +569,6 @@ private fun SectionCard(
     }
 }
 
-/* ============================ EXTENSIONS NA VM ============================ */
 
 @Suppress("UNUSED_PARAMETER")
 private fun TrainerOfferViewModel.onAvatarSelected(context: Context, uri: Uri?) { }

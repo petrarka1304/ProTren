@@ -82,9 +82,7 @@ fun TrainerPlansScreen(nav: NavHostController) {
 
                 val filterOk = when (filter) {
                     PlanFilter.ALL -> true
-                    // Szablony = faktyczne plany z dniami
                     PlanFilter.TEMPLATES -> plan.daysCount > 0
-                    // Szkice = plany bez dni
                     PlanFilter.DRAFTS -> plan.daysCount == 0
                 }
 
@@ -144,7 +142,6 @@ fun TrainerPlansScreen(nav: NavHostController) {
                                     }
                                 },
                                 onAssign = { id ->
-                                    // === WAŻNE: tylko pełne plany można przypisać użytkownikowi ===
                                     val plan = plans.firstOrNull { it.id == id }
                                     if (plan == null || plan.daysCount <= 0) {
                                         scope.launch {
@@ -219,7 +216,7 @@ private fun TrainerHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Panel trenera", style = MaterialTheme.typography.headlineSmall)
+                Text("Szablony treningowe", style = MaterialTheme.typography.headlineSmall)
                 Text(
                     "Zarządzaj swoimi szablonami treningów",
                     style = MaterialTheme.typography.bodyMedium,
@@ -412,7 +409,7 @@ private fun PlanCard(
             }
             IconButton(
                 onClick = onAssign,
-                enabled = daysCount > 0 // blokada przypisywania pustych planów
+                enabled = daysCount > 0
             ) {
                 Icon(
                     Icons.Filled.PersonAdd,

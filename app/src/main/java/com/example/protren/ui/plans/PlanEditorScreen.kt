@@ -34,9 +34,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// ────────────────────────────────────────────────────────────────────────────────
-// ZABEZPIECZENIA (limity / sanitizacja)
-// ────────────────────────────────────────────────────────────────────────────────
 
 private const val MAX_PLAN_NAME = 60
 private const val MAX_DAY_TITLE = 40
@@ -59,9 +56,6 @@ private fun String.onlyDigits(maxLen: Int): String =
 private fun String.sanitizeText(maxLen: Int): String =
     this.trim().replace(Regex("\\s+"), " ").take(maxLen)
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Lokalne UI-modele do edycji
-// ────────────────────────────────────────────────────────────────────────────────
 
 private data class ExerciseUi(
     val name: String,
@@ -74,7 +68,7 @@ private data class DayUi(
     val exercises: MutableList<ExerciseUi> = mutableListOf()
 )
 
-// klucze zwrotne z ekranu wyboru ćwiczeń – projektu już używa ich gdzie indziej
+
 private const val EX_RESULT_IDS = "EXERCISE_PICKER_RESULT_IDS"
 private const val EX_RESULT_NAMES = "EXERCISE_PICKER_RESULT_NAMES"
 
@@ -96,10 +90,8 @@ fun PlanEditorScreen(
     var isPublic by remember { mutableStateOf(false) }
     val days = remember { mutableStateListOf<DayUi>() }
 
-    // dla dodawania ćwiczeń do konkretnego dnia – trzymamy indeks docelowego dnia
     var pendingAddForDayIndex by remember { mutableStateOf<Int?>(null) }
 
-    // ── LOAD ────────────────────────────────────────────────────────────────────
     LaunchedEffect(planId) {
         loading = true
         try {
@@ -135,10 +127,8 @@ fun PlanEditorScreen(
         }
     }
 
-    // ── ODBIÓR ĆWICZEŃ Z PICKERA (po powrocie) ──────────────────────────────────
     LaunchedEffect(Unit) {
         val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        // nasłuchuj tylko raz – po każdym dodaniu czyścimy wartości
         handle.getStateFlow<ArrayList<String>?>(EX_RESULT_IDS, null).collect { ids ->
             if (ids.isNullOrEmpty()) return@collect
             val names = handle.get<ArrayList<String>>(EX_RESULT_NAMES)
@@ -150,14 +140,12 @@ fun PlanEditorScreen(
                     days[dayIdx].exercises.add(ExerciseUi(name = exName))
                 }
             }
-            // cleanup
             pendingAddForDayIndex = null
             handle[EX_RESULT_IDS] = null
             handle[EX_RESULT_NAMES] = null
         }
     }
 
-    // ── AKCJE: save / delete ────────────────────────────────────────────────────
     fun savePlan() {
         if (saving) return
         saving = true
@@ -176,7 +164,7 @@ fun PlanEditorScreen(
 
                         ExerciseRequest(
                             name = safeExName,
-                            muscleGroup = "Nieznana", // dopasuj do swojego modelu (jeśli brak pola)
+                            muscleGroup = "Nieznana",
                             sets = safeSets,
                             repsMin = safeReps,
                             repsMax = safeReps,
@@ -198,7 +186,7 @@ fun PlanEditorScreen(
 
                 val res = withContext(Dispatchers.IO) { api.updatePlan(planId, dto) }
                 if (res.isSuccessful) {
-                    snackbar.showSnackbar("Zapisano plan ✅")
+                    snackbar.showSnackbar("Zapisano plan")
                     navController.navigateUp()
                 } else {
                     snackbar.showSnackbar("Błąd zapisu: ${res.code()}")
@@ -231,7 +219,6 @@ fun PlanEditorScreen(
         }
     }
 
-    // ── UI ──────────────────────────────────────────────────────────────────────
     Scaffold(
         topBar = {
             TopAppBar(
@@ -272,7 +259,6 @@ fun PlanEditorScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
-                // Ustawienia bazowe planu
                 item {
                     ElevatedCard(shape = RoundedCornerShape(20.dp)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -294,7 +280,6 @@ fun PlanEditorScreen(
                     }
                 }
 
-                // Dni planu
                 itemsIndexed(days, key = { idx, _ -> "day_$idx" }) { index, day ->
                     DayEditorCard(
                         dayIndex = index,
@@ -343,7 +328,6 @@ fun PlanEditorScreen(
         }
     }
 
-    // potwierdzenie usuwania planu
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -355,9 +339,6 @@ fun PlanEditorScreen(
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Karta pojedynczego dnia planu
-// ────────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun DayEditorCard(
@@ -407,7 +388,6 @@ private fun DayEditorCard(
                 }
             }
 
-            // Lista ćwiczeń
             if (day.exercises.isEmpty()) {
                 Text(
                     "Brak ćwiczeń — dodaj pierwsze.",
@@ -424,7 +404,6 @@ private fun DayEditorCard(
                 }
             }
 
-            // Przyciski dot. ćwiczeń
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(onClick = onAddExercises) {
                     Icon(Icons.Filled.Add, contentDescription = null)
@@ -436,9 +415,6 @@ private fun DayEditorCard(
     }
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Pojedyncza linia ćwiczenia z akcjami
-// ────────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ExerciseRow(

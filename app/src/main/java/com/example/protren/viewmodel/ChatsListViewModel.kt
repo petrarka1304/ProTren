@@ -37,7 +37,7 @@ class ChatsListViewModel(app: Application) : AndroidViewModel(app) {
             _loading.value = true
             _error.value = null
             try {
-                val resp = api.list() // ⬅️ poprawka: wcześniej było listMyChats()
+                val resp = api.list()
                 if (resp.isSuccessful) {
                     _items.value = resp.body().orEmpty()
                 } else {

@@ -7,7 +7,7 @@ import java.net.UnknownHostException
 
 object ErrorMapper {
 
-    /** Mapowanie wyjątków sieciowych na komunikat dla użytkownika. */
+
     fun fromNetwork(t: Throwable): String {
         return when (t) {
             is UnknownHostException -> "Brak połączenia z internetem."
@@ -17,10 +17,6 @@ object ErrorMapper {
         }
     }
 
-    /**
-     * Mapowanie odpowiedzi HTTP (4xx/5xx) na komunikat.
-     * errorBody może być JSON-em z message/msg/error/detail.
-     */
     fun fromHttp(code: Int, errorBody: String?): String {
         val serverMsg = extractServerMessage(errorBody)
         if (!serverMsg.isNullOrBlank()) return serverMsg

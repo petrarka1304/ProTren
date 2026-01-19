@@ -25,7 +25,6 @@ import com.example.protren.repository.ReviewRepository
 import com.example.protren.ui.analytics.AnalyticsScreen
 import com.example.protren.ui.analytics.TrackedExercisesProgressScreen
 import com.example.protren.ui.analytics.TrackedExercisesScreen
-import com.example.protren.ui.auth.RegisterScreen
 import com.example.protren.ui.login.LoginScreen
 import com.example.protren.ui.main.HomeScreen
 import com.example.protren.ui.main.ProfileScreen
@@ -52,6 +51,7 @@ import com.example.protren.ui.workouts.AutoPlanScreen
 import com.example.protren.ui.workouts.EditWorkoutScreen
 import com.example.protren.ui.workouts.WorkoutsListScreen
 import com.example.protren.ui.exercises.ExercisePickerScreen
+import com.example.protren.ui.register.RegisterScreen
 import com.example.protren.ui.trainer.ChatThreadScreen
 import com.example.protren.viewmodel.HomeViewModel
 import com.example.protren.viewmodel.ReviewViewModel
@@ -67,12 +67,12 @@ fun AppNavGraph(
         startDestination = "splash",
         route = "root_graph"
     ) {
-        // ─── Splash / Auth ───
+        // Splash / Auth
         composable("splash") { SplashScreen(navController) }
         composable(NavItem.Login) { LoginScreen(navController) }
         composable(NavItem.Register) { RegisterScreen(navController) }
 
-        // ─── HOME ───
+        //HOME
         composable(NavItem.Home) {
             val ctx = LocalContext.current
             val prefs = remember { UserPreferences(ctx) }
@@ -84,14 +84,14 @@ fun AppNavGraph(
             )
         }
 
-        // ─── Analityka ───
+        //Analityka
         composable(NavItem.Analytics) { AnalyticsScreen(navController) }
 
-        // ✅ NOWE: Śledzone ćwiczenia (wybór + podgląd)
+        //Śledzone ćwiczenia
         composable("trackedExercises") { TrackedExercisesScreen(navController) }
         composable("trackedExercisesProgress") { TrackedExercisesProgressScreen(navController) }
 
-        // ─── Suplementy ───
+        //Suplementy
         composable(NavItem.SupplementsToday) {
             SupplementsScreen(navController = navController)
         }
@@ -109,7 +109,7 @@ fun AppNavGraph(
             SupplementsManageScreen(navController = navController)
         }
 
-        // ─── Workouts ───
+        //Workouts
         composable(NavItem.Workouts) { WorkoutsListScreen(navController) }
         composable(NavItem.AddWorkout) { AddWorkoutScreen(navController) }
         composable("${NavItem.EditWorkout}/{id}") { backStack ->
@@ -118,7 +118,7 @@ fun AppNavGraph(
         }
         composable("autoPlan") { AutoPlanScreen(navController) }
 
-        // ─── Plany ───
+        //Plany
         composable("plans") { PlansScreen(navController) }
         composable("planDetails/{id}") { backStack ->
             val id = backStack.arguments?.getString("id") ?: ""
@@ -129,23 +129,22 @@ fun AppNavGraph(
             PlanEditorScreen(navController = navController, planId = id)
         }
 
-        // ─── PR ───
+        //PR
         composable("pr") { PersonalRecordsScreen(navController) }
         composable("pr/{encodedName}") { backStack ->
             val name = backStack.arguments?.getString("encodedName") ?: ""
             ExerciseHistoryScreen(navController, encodedName = name)
         }
 
-        // ─── Profil ───
+        //Profil
         composable(NavItem.Profile) { ProfileScreen(navController) }
         composable("exercisePicker") { ExercisePickerScreen(navController) }
 
         composable("settings") { SettingsScreen(navController) }
 
-        // ─── Trenerzy / premium ───
+        //Trenerzy
         composable("trainerList") { TrainerListScreen(navController) }
 
-        // publiczny profil trenera (widok użytkownika)
         composable("trainerProfile/{id}") { backStack ->
             val id = backStack.arguments?.getString("id") ?: ""
 
@@ -181,7 +180,7 @@ fun AppNavGraph(
             PurchaseTrainerScreen(navController = navController, trainerId = trainerId)
         }
 
-        // ─── Dodawanie opinii o trenerze ───
+        //Dodawanie opinii
         composable(
             route = "trainerReview/{trainerId}",
             arguments = listOf(navArgument("trainerId") { type = NavType.StringType })
@@ -211,7 +210,7 @@ fun AppNavGraph(
             )
         }
 
-        // ─── Czaty ───
+        //Czaty
         composable(
             route = "chatThread/{chatId}?otherUserId={otherUserId}&otherName={otherName}",
             arguments = listOf(
@@ -240,7 +239,6 @@ fun AppNavGraph(
         }
         composable("chats") { UserChatsScreen(navController) }
 
-        // 🔹 NOWY EKRAN: start czatu z wybranym trenerem
         composable(
             route = "chatStart/{userId}",
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
@@ -249,7 +247,7 @@ fun AppNavGraph(
             ChatStartScreen(navController = navController, otherUserId = userId)
         }
 
-        // ─── Panel trenera ───
+        //Panel trenera
         composable("trainerRoot") { TrainerRoot(navController = navController) }
         composable("trainerProfile") {
             val ctx = LocalContext.current
@@ -267,7 +265,6 @@ fun AppNavGraph(
             val repo = remember { ReviewRepository(api) }
             val reviewVm = remember { ReviewViewModel(repo) }
 
-            // profil "me" – trener widzi swoje opinie
             TrainerPublicProfileScreen(
                 trainerId = "me",
                 reviewViewModel = reviewVm
@@ -293,10 +290,6 @@ fun AppNavGraph(
     }
 }
 
-/**
- * Ekran pomocniczy: po wybraniu trenera wywołuje /chats/start,
- * a potem przekierowuje do ChatThreadScreen.
- */
 @Composable
 private fun ChatStartScreen(
     navController: NavHostController,

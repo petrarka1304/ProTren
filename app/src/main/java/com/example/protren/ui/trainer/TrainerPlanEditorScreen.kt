@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -18,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -47,7 +49,6 @@ fun TrainerPlanEditorScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // ładowanie planu tylko jeśli nie jest jeszcze wczytany
     LaunchedEffect(planId) {
         val current = vm.state.value
         if (current !is PlanEditorState.Loaded || current.id != planId) {
@@ -55,7 +56,6 @@ fun TrainerPlanEditorScreen(
         }
     }
 
-    // ========= ODBIÓR WYNIKU Z ExercisePicker =========
     val navBackStackEntry by nav.currentBackStackEntryAsState()
     val savedStateHandle = navBackStackEntry?.savedStateHandle
 
@@ -137,7 +137,6 @@ fun TrainerPlanEditorScreen(
                         .fillMaxSize()
                         .padding(padding)
                 ) {
-                    // ----- Karta z nazwą planu -----
                     ElevatedCard(
                         shape = RoundedCornerShape(22.dp),
                         modifier = Modifier
@@ -228,7 +227,6 @@ fun TrainerPlanEditorScreen(
                         }
                     }
 
-                    // ----- Pasek zapisu -----
                     Surface(
                         tonalElevation = 3.dp,
                         shadowElevation = 8.dp
@@ -346,7 +344,6 @@ private fun DayCard(
                 }
             }
 
-            // ---- lista ćwiczeń w tym dniu ----
             if (exercises.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -382,34 +379,51 @@ private fun ExerciseRowEditor(
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
-                value = exercise.sets.toString(),
-                onValueChange = {
-                    val v = it.toIntOrNull() ?: exercise.sets
-                    onChange(exercise.copy(sets = v))
+                value = if (exercise.sets == 0) "" else exercise.sets.toString(),
+                onValueChange = { input ->
+                    val cleanInput = input.filter { it.isDigit() }.take(3)
+
+                    val newValue = cleanInput.toIntOrNull() ?: 0
+                    onChange(exercise.copy(sets = newValue))
                 },
                 label = { Text("Serie") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), // Klawiatura numeryczna
                 modifier = Modifier.width(80.dp)
             )
+
             OutlinedTextField(
-                value = exercise.reps.toString(),
-                onValueChange = {
-                    val v = it.toIntOrNull() ?: exercise.reps
-                    onChange(exercise.copy(reps = v))
+                value = if (exercise.reps == 0) "" else exercise.reps.toString(),
+                onValueChange = { input ->
+                    val cleanInput = input.filter { it.isDigit() }.take(3)
+                    val newValue = cleanInput.toIntOrNull() ?: 0
+                    onChange(exercise.copy(reps = newValue))
                 },
-                label = { Text("Powtórzenia") },
+                label = { Text("Powt.") },
                 singleLine = true,
-                modifier = Modifier.width(110.dp)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.width(90.dp)
             )
+
             OutlinedTextField(
-                value = if (exercise.weight == 0f) "" else exercise.weight.toString(),
-                onValueChange = {
-                    val v = it.replace(",", ".").toFloatOrNull() ?: exercise.weight
-                    onChange(exercise.copy(weight = v))
+
+                value = if (exercise.weight == 0f) "" else exercise.weight.toString().removeSuffix(".0"),
+                onValueChange = { input ->
+
+                    var cleanInput = input.replace(",", ".")
+
+                    // Zabezpieczenie
+                    if (cleanInput.length <= 6 && cleanInput.count { it == '.' } <= 1) {
+                        cleanInput = cleanInput.filter { it.isDigit() || it == '.' }
+
+                        val newValue = cleanInput.toFloatOrNull() ?: 0f
+                        onChange(exercise.copy(weight = newValue))
+                    }
                 },
-                label = { Text("Ciężar") },
+                label = { Text("kg") },
                 singleLine = true,
-                modifier = Modifier.width(110.dp)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), // Klawiatura dziesiętna
+                modifier = Modifier.width(100.dp)
             )
         }
     }

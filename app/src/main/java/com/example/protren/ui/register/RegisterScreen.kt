@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-package com.example.protren.ui.auth
+package com.example.protren.ui.register
 
 import android.app.Application
 import androidx.compose.foundation.layout.*
@@ -25,7 +25,6 @@ fun RegisterScreen(navController: NavController) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // ViewModel z własną fabryką (potrzebny UserPreferences)
     val app = LocalContext.current.applicationContext as Application
     val prefs = remember { UserPreferences(app) }
     val vm: RegisterViewModel = viewModel(factory = object : ViewModelProvider.Factory {
@@ -40,10 +39,8 @@ fun RegisterScreen(navController: NavController) {
     var pass by remember { mutableStateOf("") }
     var pass2 by remember { mutableStateOf("") }
 
-    // 🔹 nowość: wybór czy konto ma być trenerskie
     var isTrainer by remember { mutableStateOf(false) }
 
-    // Reakcja na stany VM
     LaunchedEffect(state) {
         when (state) {
             is RegisterState.Error -> {
@@ -51,7 +48,7 @@ fun RegisterScreen(navController: NavController) {
                 snackbar.showSnackbar(msg)
             }
             RegisterState.Success -> {
-                snackbar.showSnackbar("Konto utworzone ✅ Zaloguj się.")
+                snackbar.showSnackbar("Konto utworzone Zaloguj się.")
                 navController.navigate("login") {
                     popUpTo("register") { inclusive = true }
                     launchSingleTop = true
@@ -111,7 +108,6 @@ fun RegisterScreen(navController: NavController) {
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // 🔹 sekcja: typ konta
                     Spacer(Modifier.height(8.dp))
                     Text("Rodzaj konta", style = MaterialTheme.typography.titleMedium)
 

@@ -6,10 +6,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-/**
- * Prosty, czytelny zestaw stylów oparty na systemowej czcionce.
- * Jeśli chcesz użyć własnej rodziny fontów, podmień FontFamily.Default.
- */
+
 private val AppFontFamily = FontFamily.Default
 
 val AppTypography = Typography(

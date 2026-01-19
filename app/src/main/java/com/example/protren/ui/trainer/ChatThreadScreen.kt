@@ -81,14 +81,9 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-// Bazowy URL backendu (dla względnych ścieżek typu "/uploads/..." – NIE dla signed URL)
 private const val CHAT_MEDIA_BASE_URL = "https://protren-backend.onrender.com"
 
-/**
- * ✅ Normalizacja URL-i dla Cloudflare R2:
- * - jeśli raw jest już http(s) => zwracamy jak jest (signed URL)
- * - jeśli raw jest względne => doklejamy CHAT_MEDIA_BASE_URL
- */
+
 private fun normalizeMediaUrl(raw: String?): String? {
     val v = raw?.trim()
     if (v.isNullOrBlank()) return null
@@ -136,7 +131,6 @@ fun ChatThreadScreen(
     var replyTo by remember { mutableStateOf<ChatMessageDto?>(null) }
     var longPressed by remember { mutableStateOf<ChatMessageDto?>(null) }
 
-    // --- stan „oczekujących” zdjęć + podpisu ---
     var pendingImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var pendingImageCaption by remember { mutableStateOf(TextFieldValue("")) }
 
@@ -203,22 +197,47 @@ fun ChatThreadScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val avatarUrl = normalizeMediaUrl(otherAvatar)
 
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(avatarUrl)
-                                // ✅ signed URL nie wymaga Authorization
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
+                        val displayName = otherName ?: otherNameInitial ?: "?"
+                        val initials = displayName.trim().firstOrNull()?.uppercase() ?: "?"
+
+                        Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (avatarUrl != null) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(avatarUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = initials,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(Modifier.width(12.dp))
+
                         Column {
                             Text(
-                                otherName ?: otherNameInitial ?: "Rozmowa",
+                                text = displayName,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleMedium.copy(
@@ -373,7 +392,6 @@ fun ChatThreadScreen(
     }
 }
 
-/* ------------------------- lista wiadomości ------------------------- */
 
 @Composable
 private fun MessagesList(
@@ -427,14 +445,12 @@ private fun MessagesList(
     }
 }
 
-/* ------------------------- pojedyncza wiadomość ------------------------- */
-
 @Composable
 private fun MessageRow(
     msg: ChatMessageDto,
     timeText: String,
     otherUserId: String?,
-    otherAvatarUrl: String?, // <--- Nowy parametr
+    otherAvatarUrl: String?,
     authToken: String?,
     onImageClick: (urls: List<String>, startIdx: Int) -> Unit,
     onVideoClick: (url: String) -> Unit,
@@ -443,7 +459,6 @@ private fun MessageRow(
 ) {
     val mine = otherUserId != null && msg.senderId != otherUserId
 
-    // Normalizacja URL (to helper, który już masz w pliku)
     val avatarFullUrl = remember(otherAvatarUrl) { normalizeMediaUrl(otherAvatarUrl) }
 
     Row(
@@ -451,9 +466,8 @@ private fun MessageRow(
             .fillMaxWidth()
             .padding(horizontal = 2.dp),
         horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Bottom // Avatar wyrównany do dołu wiadomości
+        verticalAlignment = Alignment.Bottom
     ) {
-        // --- SEKCJA AVATARA (tylko dla rozmówcy) ---
         if (!mine) {
             if (avatarFullUrl != null) {
                 AsyncImage(
@@ -463,13 +477,12 @@ private fun MessageRow(
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
-                        .padding(end = 8.dp, bottom = 20.dp) // Odsunięcie od dymku i dołu
+                        .padding(end = 8.dp, bottom = 20.dp)
                         .size(32.dp)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                // Zaślepka, jeśli brak URL (szare kółko)
                 Box(
                     modifier = Modifier
                         .padding(end = 8.dp, bottom = 20.dp)
@@ -479,7 +492,7 @@ private fun MessageRow(
                 )
             }
         }
-        // -------------------------------------------
+
 
         Column(horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
 
@@ -515,7 +528,6 @@ private fun MessageRow(
     }
 }
 
-/* ------------------------- Bąbelek wiadomości ------------------------- */
 
 @Composable
 private fun Bubble(
@@ -599,7 +611,6 @@ private fun Bubble(
     }
 }
 
-/* ------------------------- obrazki + wideo ------------------------- */
 
 @Composable
 private fun ImageMosaic(
@@ -614,7 +625,6 @@ private fun ImageMosaic(
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (images.isNotEmpty()) {
-            // ✅ używamy normalizeMediaUrl -> nie psuje signed URL-i
             val urls = images.mapNotNull { normalizeMediaUrl(it.url) }
 
             Row(
@@ -628,7 +638,6 @@ private fun ImageMosaic(
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(imageUrl)
-                                // ✅ signed URL nie wymaga Authorization (a często przeszkadza)
                                 .crossfade(true)
                                 .build(),
                             contentDescription = null,
@@ -690,8 +699,6 @@ private fun ImageMosaic(
     }
 }
 
-/* ------------------------- typing indicator ------------------------- */
-
 @Composable
 private fun TypingIndicator(visible: Boolean, modifier: Modifier = Modifier) {
     if (!visible) return
@@ -717,8 +724,6 @@ private fun TypingIndicator(visible: Boolean, modifier: Modifier = Modifier) {
         }
     }
 }
-
-/* ------------------------- reply stub w bąbelku ------------------------- */
 
 @Composable
 private fun ReplyStub(original: ReplyRef, mine: Boolean) {
@@ -747,8 +752,6 @@ private fun ReplyStub(original: ReplyRef, mine: Boolean) {
         }
     }
 }
-
-/* ------------------------- Input bar ------------------------- */
 
 @Composable
 private fun InputBar(
@@ -848,8 +851,6 @@ private fun ReplyPreview(original: ChatMessageDto, onCancel: () -> Unit) {
     }
 }
 
-/* ------------------------- Action sheet do wiadomości ------------------------- */
-
 @Composable
 private fun MessageActionSheet(
     mine: Boolean,
@@ -894,7 +895,6 @@ private fun MessageActionSheet(
     )
 }
 
-/* ------------------------- Attach dialog ------------------------- */
 
 @Composable
 private fun AttachDialog(
@@ -926,8 +926,6 @@ private fun AttachDialog(
         }
     )
 }
-
-/* ------------------------- Pasek podglądu wybranych zdjęć ------------------------- */
 
 @Composable
 private fun PendingImagesBar(

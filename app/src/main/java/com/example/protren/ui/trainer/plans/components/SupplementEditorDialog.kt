@@ -101,7 +101,6 @@ fun SupplementEditorDialog(
 
 @Composable
 private fun WrapRow(content: @Composable RowScope.() -> Unit) {
-    // prościutka „zawijana” linia bez dodatkowych bibliotek
     Column {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, content = content)
     }

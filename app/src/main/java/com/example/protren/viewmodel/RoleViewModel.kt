@@ -13,16 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-/** Dwie gałęzie UI w aplikacji. */
 enum class AppRole { TRAINEE, TRAINER }
 
-/**
- * Ustala rolę aktualnie zalogowanego użytkownika.
- * - Najpierw szybki odczyt z JWT (bez sieci), aby uniknąć migania UI.
- * - Następnie ciche potwierdzenie z backendu (/users/me).
- * - Mapowanie: "trainer" **i** "admin" → TRAINER; "user" → TRAINEE.
- * - Brak komunikatów dla użytkownika przy starcie; tylko logi.
- */
+
 class RoleViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = UserPreferences(app)
 
@@ -32,24 +25,19 @@ class RoleViewModel(app: Application) : AndroidViewModel(app) {
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading
 
-    // Zostawiamy kanał błędu, ale nie używamy go przy starcie (silent errors)
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
-
-    /** Mapuje tekstową rolę z JWT/serwera na AppRole używaną przez UI. */
     private fun mapRole(source: String?): AppRole? = when (source?.lowercase()) {
         "trainer", "admin" -> AppRole.TRAINER
         "user"             -> AppRole.TRAINEE
         else               -> null
     }
 
-    /** Usuwa potencjalny prefiks "Bearer " / "bearer " z tokena. */
     private fun cleanToken(raw: String?): String {
         if (raw.isNullOrBlank()) return ""
         return raw.removePrefix("Bearer ").removePrefix("bearer ").trim()
     }
 
-    /** Szybkie odczytanie roli z payloadu JWT (bez sieci). */
     private fun decodeRoleFromJwt(token: String?): String? {
         val t = token?.trim().orEmpty()
         if (t.isBlank()) return null
@@ -67,10 +55,6 @@ class RoleViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Publiczny entrypoint do ustalania roli.
-     * @param silent jeśli true, błędy nie są raportowane do UI (brak snackbarów/toastów).
-     */
     fun load(silent: Boolean = true) {
         viewModelScope.launch {
             _loading.value = true
@@ -79,14 +63,12 @@ class RoleViewModel(app: Application) : AndroidViewModel(app) {
                 val raw = prefs.getAccessToken()
                 val token = cleanToken(raw)
 
-                // Brak tokena: nie zgłaszamy błędu do UI — po prostu traktujemy jako użytkownika.
                 if (token.isBlank()) {
                     if (_role.value == null) _role.value = AppRole.TRAINEE
                     Log.d("RoleVM", "No token — defaulting to TRAINEE (silent).")
                     return@launch
                 }
 
-                // 1) Błyskawiczny odczyt z JWT (bez sieci) — ustala wstępnie gałąź UI
                 decodeRoleFromJwt(token)?.let { jwtRole ->
                     mapRole(jwtRole)?.let { mapped ->
                         _role.value = mapped
@@ -96,7 +78,6 @@ class RoleViewModel(app: Application) : AndroidViewModel(app) {
                     Log.d("RoleVM", "No/unknown role in JWT — will confirm via /users/me")
                 }
 
-                // 2) Ciche potwierdzenie z backendu (users/me) z auto-refresh
                 val retrofit = ApiClient.createWithAuth(
                     tokenProvider = { prefs.getAccessToken() },
                     refreshTokenProvider = { prefs.getRefreshToken() },
@@ -105,7 +86,6 @@ class RoleViewModel(app: Application) : AndroidViewModel(app) {
                         Log.d("RoleVM", "Tokens refreshed while confirming role.")
                     },
                     onUnauthorized = {
-                        // Sesja wygasła – czyścimy bez komunikatu dla użytkownika podczas startu
                         prefs.clearAll()
                         Log.w("RoleVM", "Unauthorized while confirming role — session cleared.")
                     }
@@ -123,11 +103,9 @@ class RoleViewModel(app: Application) : AndroidViewModel(app) {
                         Log.w("RoleVM", "Unknown server role: $serverRole — keeping previous=${_role.value}")
                     }
                 } else {
-                    // Brak hałasu dla użytkownika – tylko log
                     Log.w("RoleVM", "users/me failed: HTTP ${res.code()} — keeping previous=${_role.value}")
                 }
             } catch (e: Exception) {
-                // Cicho logujemy — bez wyświetlania komunikatów na UI przy starcie
                 Log.e("RoleVM", "load error: ${e.message}", e)
                 if (!silent) _error.value = e.localizedMessage
                 if (_role.value == null) _role.value = AppRole.TRAINEE

@@ -57,12 +57,9 @@ private fun ProTrenApp() {
 
             val context = LocalContext.current
             val prefs = remember(context) { UserPreferences(context) }
-
-            // 🔔 Nasłuch globalnych zdarzeń wylogowania
             LaunchedEffect(Unit) {
                 AuthBus.events.collectLatest { ev ->
                     if (ev is AuthEvent.LoggedOut) {
-                        // ✅ TWARDY RESET DANYCH OD RAZU
                         prefs.clearAll()
 
                         loggedOutMsg = ev.reason.ifBlank {
@@ -72,7 +69,6 @@ private fun ProTrenApp() {
                     }
                 }
             }
-            // 🔔 Globalne komunikaty błędów (snackbar)
             LaunchedEffect(Unit) {
                 ErrorBus.messages.collectLatest { msg ->
                     snackbar.showSnackbar(msg)
@@ -96,10 +92,8 @@ private fun ProTrenApp() {
                                 onClick = {
                                     showLoggedOut = false
 
-                                    // ✅ Dla pewności jeszcze raz czyścimy (idempotentnie)
                                     prefs.clearAll()
 
-                                    // 🔁 Restart aplikacji i wyczyszczenie backstacku
                                     val launchIntent = context.packageManager
                                         .getLaunchIntentForPackage(context.packageName)
                                         ?.apply {

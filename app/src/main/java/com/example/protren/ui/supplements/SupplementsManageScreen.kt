@@ -36,20 +36,12 @@ fun SupplementsManageScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
-
-    // stan
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var supplements by remember { mutableStateOf<List<Supplement>>(emptyList()) }
-
-    // 🔄 sygnał z poprzedniego ekranu (editor)
-    // jeśli w edytorze robimy:
-    // navController.previousBackStackEntry?.savedStateHandle?.set("supplements_changed", true)
-    // to tutaj to odbierzemy
     val currentBackStack = navController.currentBackStackEntry
     val savedStateHandle = currentBackStack?.savedStateHandle
 
-    // helper do API
     fun buildApi(): SupplementApi? {
         val token = prefs.getAccessToken() ?: return null
         val client = ApiClient.createWithAuth(
@@ -59,7 +51,6 @@ fun SupplementsManageScreen(
         return client.create(SupplementApi::class.java)
     }
 
-    // właściwe pobranie
     fun reload() {
         scope.launch {
             loading = true
@@ -83,19 +74,16 @@ fun SupplementsManageScreen(
         }
     }
 
-    // pierwszy load
     LaunchedEffect(Unit) {
         reload()
     }
 
-    // nasłuchujemy na flagę z edytora i z innych ekranów
     LaunchedEffect(savedStateHandle) {
         savedStateHandle
             ?.getStateFlow("supplements_changed", false)
             ?.collect { changed ->
                 if (changed) {
                     reload()
-                    // wyczyść flagę, żeby się nie zapętlało
                     savedStateHandle["supplements_changed"] = false
                 }
             }
@@ -186,13 +174,11 @@ fun SupplementsManageScreen(
                                 navController.navigate("${NavItem.SupplementEditor}?id=$id")
                             },
                             onDelete = { id ->
-                                // usuń i odśwież
                                 scope.launch {
                                     try {
                                         val api = buildApi() ?: return@launch
                                         val resp = api.delete(id)
                                         if (resp.isSuccessful || resp.code() == 204) {
-                                            // powiedz też HomeScreen, że się zmieniło
                                             navController.currentBackStackEntry
                                                 ?.savedStateHandle
                                                 ?.set("supplements_changed", true)
@@ -262,7 +248,6 @@ private fun SupplementManageItem(
 
                     val dosage = supplement.dosage.orEmpty()
                     val times = (supplement.times ?: emptyList()).joinToString(", ") {
-                        // ładniejsze wyświetlanie po polsku
                         when (it) {
                             "morning" -> "rano"
                             "midday" -> "południe"

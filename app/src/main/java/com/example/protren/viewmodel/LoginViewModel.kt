@@ -3,12 +3,12 @@ package com.example.protren.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.protren.api.TokenInterceptor
 import com.example.protren.data.UserPreferences
 import com.example.protren.data.remote.AuthApi
 import com.example.protren.data.remote.LoginRequest
 import com.example.protren.data.remote.LoginResponse
 import com.example.protren.network.ApiClient
-import com.example.protren.network.TokenInterceptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,12 +52,10 @@ class LoginViewModel(private val prefs: UserPreferences) : ViewModel() {
                         "Login OK. tokenLen=${token.length}, role=${body.user.role}, email=${body.user.email}"
                     )
 
-                    // Zapis do SharedPreferences
                     prefs.saveToken(token)
                     prefs.saveRole(body.user.role.lowercase())
                     prefs.saveEmail(body.user.email)
 
-                    // Aktualizacja tokenu w pamięci (dla interceptora)
                     TokenInterceptor.updateToken(token)
 
                     _state.value = LoginState.Success

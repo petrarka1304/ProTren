@@ -3,8 +3,8 @@ package com.example.protren.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.protren.data.ExerciseRepository
 import com.example.protren.network.ExerciseDto
+import com.example.protren.repository.ExerciseRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -98,7 +98,6 @@ class ExercisePickerViewModel(
         }
     }
 
-    /** Ułatwienie do odczytu zaznaczonych nazw w UI. */
     fun pickedNames(): List<String> {
         val s = _ui.value
         val map = s.items.associateBy { it._id }

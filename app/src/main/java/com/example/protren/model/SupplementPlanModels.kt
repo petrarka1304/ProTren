@@ -8,8 +8,8 @@ data class SupplementPlanItem(
     val supplementName: String,
     val dose: String,
     val timing: String = "",
-    val frequency: String = "daily",        // daily | weekly | custom
-    val daysOfWeek: List<Int> = emptyList(),// 0..6
+    val frequency: String = "daily",
+    val daysOfWeek: List<Int> = emptyList(),
     val notes: String = ""
 )
 

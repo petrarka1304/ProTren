@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,10 +28,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.protren.model.Trainer
 import com.example.protren.viewmodel.TrainerListViewModel
 import kotlinx.coroutines.launch
+private const val MEDIA_BASE_URL = "https://protren-backend.onrender.com"
 
+private fun normalizeUrl(raw: String?): String? {
+    val v = raw?.trim()
+    if (v.isNullOrBlank()) return null
+    if (v.startsWith("http://", true) || v.startsWith("https://", true)) return v
+    return MEDIA_BASE_URL.trimEnd('/') + "/" + v.trimStart('/')
+}
 @Composable
 fun TrainerListScreen(navController: NavHostController) {
     val snackbar = remember { SnackbarHostState() }
@@ -208,6 +219,9 @@ private fun TrainerCard(
     val ratingCount = t.ratingCount ?: 0
     val priceText = t.priceMonth?.let { "${it.toInt()} zł / mies." } ?: "Cena ustalana indywidualnie"
 
+    // ✅ Normalizacja URL zdjęcia (z R2 lub starego serwera)
+    val avatarUrl = remember(t.avatarUrl) { normalizeUrl(t.avatarUrl) }
+
     ElevatedCard(
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier.fillMaxWidth()
@@ -219,14 +233,31 @@ private fun TrainerCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
+                // ✅ ZMIANA: Obsługa zdjęcia z fallbackiem do ikony
+                Box(
                     modifier = Modifier
                         .size(52.dp)
-                        .clip(CircleShape),
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Person, contentDescription = null)
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(avatarUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Avatar trenera",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        // Jeśli brak zdjęcia, wyświetlamy ikonkę
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                     }
                 }
 
@@ -309,7 +340,6 @@ private fun TrainerCard(
                 )
             }
 
-            // ✅ POPRAWIONE: 3 kafelki tej samej wysokości i szerokości
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -18,37 +18,16 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallTopAppBar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +35,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.protren.data.UserPreferences
 import com.example.protren.network.ApiClient
 import com.example.protren.network.ChatApi
@@ -66,6 +47,14 @@ import com.example.protren.viewmodel.TrainerPanelViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+private const val MEDIA_BASE_URL = "https://protren-backend.onrender.com"
+private fun normalizeUrl(raw: String?): String? {
+    val v = raw?.trim()
+    if (v.isNullOrBlank()) return null
+    if (v.startsWith("http://", true) || v.startsWith("https://", true)) return v
+    return MEDIA_BASE_URL.trimEnd('/') + "/" + v.trimStart('/')
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrainerTraineesScreen(nav: NavController) {
@@ -73,7 +62,7 @@ fun TrainerTraineesScreen(nav: NavController) {
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
 
-    val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as Application
+    val app = LocalContext.current.applicationContext as Application
     val vm: TrainerPanelViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -111,11 +100,9 @@ fun TrainerTraineesScreen(nav: NavController) {
             .toList()
     }
 
-    val barState = rememberTopAppBarState()
-
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -138,7 +125,6 @@ fun TrainerTraineesScreen(nav: NavController) {
                 },
                 navigationIcon = {
                     IconButton(onClick = {
-                        // 👇 zapisujemy licznik do ekranu profilu trenera
                         nav.previousBackStackEntry
                             ?.savedStateHandle
                             ?.set("trainer_trainees_count", trainees.size)
@@ -157,7 +143,6 @@ fun TrainerTraineesScreen(nav: NavController) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Pasek wyszukiwania
             SearchRow(
                 query = query,
                 onQuery = { query = it },
@@ -203,14 +188,13 @@ fun TrainerTraineesScreen(nav: NavController) {
                         var open by remember { mutableStateOf(false) }
 
                         val safeName = remember(t.name) {
-                            t.name
-                                .replace("/", "-")
-                                .replace(" ", "%20")
+                            t.name.replace("/", "-").replace(" ", "%20")
                         }
 
                         TraineeCard(
                             name = t.name,
                             email = t.email,
+                            avatarUrl = t.avatarUrl,
                             subscriptionActive = t.subscriptionActive == true,
                             subscriptionUntil = t.subscriptionUntil,
                             onCreatePlan = { open = true },
@@ -269,8 +253,6 @@ fun TrainerTraineesScreen(nav: NavController) {
     }
 }
 
-/* --------------------------------- UI częściowe --------------------------------- */
-
 @Composable
 private fun SearchRow(
     query: String,
@@ -297,11 +279,11 @@ private fun SearchRow(
     }
 }
 
-/** Karta pojedynczego podopiecznego – z informacją o współpracy. */
 @Composable
 private fun TraineeCard(
     name: String,
     email: String,
+    avatarUrl: String?,
     subscriptionActive: Boolean,
     subscriptionUntil: String?,
     onCreatePlan: () -> Unit,
@@ -324,8 +306,26 @@ private fun TraineeCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                InitialAvatar(name)
+
+                val fullUrl = remember(avatarUrl) { normalizeUrl(avatarUrl) }
+                if (fullUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(fullUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Avatar",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    InitialAvatar(name)
+                }
+
                 Spacer(Modifier.width(10.dp))
+
                 Column(Modifier.weight(1f)) {
                     Text(
                         name,

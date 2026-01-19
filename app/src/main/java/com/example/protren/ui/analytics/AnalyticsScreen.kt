@@ -16,7 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.ShowChart   // ✅ DODANE (niezbędne)
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -79,7 +79,6 @@ fun AnalyticsScreen(navController: NavController) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Odśwież")
                     }
 
-                    // ✅ DODANE: skrót do śledzonych ćwiczeń (minimalna zmiana)
                     IconButton(onClick = { navController.navigate("trackedExercises") }) {
                         Icon(Icons.Filled.ShowChart, contentDescription = "Śledzone ćwiczenia")
                     }
@@ -109,7 +108,6 @@ fun AnalyticsScreen(navController: NavController) {
 
             is AnalyticsState.Ready -> {
                 val data: WeeklySummaryResponse = s.data
-                // backend już filtruje po "days", ale na wszelki wypadek:
                 val days = data.days.takeLast(range.days)
 
                 val totalVolume = days.sumOf { it.volume }
@@ -127,10 +125,8 @@ fun AnalyticsScreen(navController: NavController) {
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Zakres 7 / 14 / 30 dni
                     RangeChipsPretty(selected = range, onSelect = vm::setRange)
 
-                    // Główne podsumowanie
                     SummaryPrettyCard(
                         title = "Podsumowanie (${range.label})",
                         sets = totalSets,
@@ -138,7 +134,6 @@ fun AnalyticsScreen(navController: NavController) {
                         volume = totalVolume
                     )
 
-                    // Karta aktywności – ładniejsza analityka
                     ActivityCard(
                         daysCount = days.size,
                         activeDays = activeDays,
@@ -146,14 +141,12 @@ fun AnalyticsScreen(navController: NavController) {
                         avgSets = avgSets
                     )
 
-                    // Wykres objętości
                     ChartCardPretty(
                         title = "Objętość dzienna",
                         bars = days.map { Bar(it.date.asShortLabel(), it.volume.toFloat()) },
                         valueFormatter = { "${it.toInt()} kg" }
                     )
 
-                    // Wykres serii
                     ChartCardPretty(
                         title = "Serie dziennie",
                         bars = days.map { Bar(it.date.asShortLabel(), it.sets.toFloat()) },
@@ -195,7 +188,6 @@ fun AnalyticsScreen(navController: NavController) {
     }
 }
 
-/* ---------- Range chips ---------- */
 
 @Composable
 private fun RangeChipsPretty(selected: AnalyticsRange, onSelect: (AnalyticsRange) -> Unit) {
@@ -210,8 +202,6 @@ private fun RangeChipsPretty(selected: AnalyticsRange, onSelect: (AnalyticsRange
         }
     }
 }
-
-/* ---------- KPI Card ---------- */
 
 @Composable
 private fun SummaryPrettyCard(title: String, sets: Int, reps: Int, volume: Int) {
@@ -315,8 +305,6 @@ private fun StatPill(label: String, value: String, modifier: Modifier = Modifier
     }
 }
 
-/* ---------- Chart ---------- */
-
 private data class Bar(val label: String, val value: Float)
 
 @Composable
@@ -347,7 +335,6 @@ private fun ChartCardPretty(
                     )
                 }
             } else {
-                // 7 dni -> słupki; 14/30 -> linia (czytelniejsze)
                 val useLineChart = bars.size > 10
                 if (useLineChart) {
                     LineChart(points = bars, height = maxBarHeight)
@@ -404,7 +391,6 @@ private fun BarChart(
             val gap = candidateGap
             val radius = CornerRadius(12f, 12f)
 
-            // linie siatki
             repeat(3) { i ->
                 val y = size.height * (i + 1) / 4f
                 drawLine(
@@ -421,14 +407,12 @@ private fun BarChart(
                 val h = (size.height * (bar.value / maxValue) * progress)
                     .coerceAtLeast(2f)
 
-                // tło słupka
                 drawRoundRect(
                     color = gridColor.copy(alpha = 0.18f),
                     topLeft = Offset(x, 0f),
                     size = Size(barW, size.height),
                     cornerRadius = radius
                 )
-                // właściwy słupek
                 drawRoundRect(
                     brush = barGradient,
                     topLeft = Offset(x, size.height - h),
@@ -470,10 +454,6 @@ private fun BarChart(
     }
 }
 
-/**
- * Czytelniejszy dla 14/30 punktów: pokazuje trend zamiast "lasu słupków".
- * Skala: 0..maxValue, siatka jak w BarChart.
- */
 @Composable
 private fun LineChart(
     points: List<Bar>,
@@ -497,7 +477,6 @@ private fun LineChart(
         val stepX = if (count <= 1) 0f else widthPx / (count - 1)
 
         Canvas(Modifier.fillMaxSize()) {
-            // linie siatki
             repeat(3) { i ->
                 val y = size.height * (i + 1) / 4f
                 drawLine(
@@ -520,7 +499,6 @@ private fun LineChart(
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
 
-            // delikatne wypełnienie pod linią (czytelniej, ale bez przesady)
             val fill = Path().apply {
                 if (coords.isNotEmpty()) {
                     moveTo(coords.first().x, size.height)
@@ -538,7 +516,6 @@ private fun LineChart(
                 style = Stroke(width = 4f, cap = StrokeCap.Round)
             )
 
-            // punkty tylko co kilka (żeby nie było "koralików" na 30 dniach)
             val stride = (count / 8).coerceAtLeast(1)
             coords.forEachIndexed { idx, o ->
                 if (idx % stride == 0 || idx == 0 || idx == coords.lastIndex) {
@@ -554,7 +531,6 @@ private fun LineChart(
 
     Spacer(Modifier.height(6.dp))
 
-    // Oś X: etykiety rzadziej, żeby dało się to przeczytać dla 14/30
     val n = points.size.coerceAtLeast(1)
     val every = (n / 6).coerceAtLeast(1)
 
@@ -576,8 +552,6 @@ private fun LineChart(
         }
     }
 }
-
-/* ---------- Stany ---------- */
 
 @Composable
 private fun LoadingSkeleton(modifier: Modifier = Modifier) {
@@ -614,8 +588,6 @@ private fun ErrorState(
         }
     }
 }
-
-/* ---------- Utils ---------- */
 
 private fun String.asShortLabel(): String {
     return runCatching {

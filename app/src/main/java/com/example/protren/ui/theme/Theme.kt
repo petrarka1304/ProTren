@@ -9,7 +9,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-// Ciemna paleta
 private val DarkColors = darkColorScheme(
     primary = Primary,
     onPrimary = OnPrimary,
@@ -24,14 +23,12 @@ private val DarkColors = darkColorScheme(
     onError = OnError
 )
 
-// Jasna paleta – dopasuj nazwy kolorów do swoich stałych, jeśli masz inne.
 private val LightColors = lightColorScheme(
     primary = Primary,
     onPrimary = OnPrimary,
     primaryContainer = PrimaryContainer,
     onPrimaryContainer = OnPrimaryContainer,
     secondary = Secondary,
-    // zakładam, że masz odpowiednie jasne odpowiedniki
     background = BackgroundLight,
     surface = SurfaceLight,
     surfaceVariant = SurfaceVariantLight,
@@ -49,7 +46,6 @@ fun ProTrenTheme(
     val context = LocalContext.current
     val dynamicEnabled = useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-    // Możesz tu w przyszłości dodać dynamic colors, na razie wybór dark/light
     val colorScheme: ColorScheme = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(

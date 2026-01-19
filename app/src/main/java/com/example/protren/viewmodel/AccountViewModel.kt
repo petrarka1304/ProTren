@@ -3,10 +3,10 @@ package com.example.protren.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.protren.api.TokenInterceptor
 import com.example.protren.data.UserPreferences
 import com.example.protren.model.MeResponse
 import com.example.protren.network.ApiClient
-import com.example.protren.network.TokenInterceptor
 import com.example.protren.network.UserApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,7 +84,7 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
                 val res = api.updateMe(body)
                 if (res.isSuccessful && res.body() != null) {
                     _state.value = AccountUIState.Saved(
-                        msg = "Dane konta zaktualizowane ✅",
+                        msg = "Dane konta zaktualizowane ",
                         me = res.body()
                     )
                 } else if (res.code() == 401 || res.code() == 403) {
@@ -115,10 +115,7 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
 
                 val res = api.deleteMe()
                 if (res.isSuccessful) {
-                    // Wyczyść token w interceptorze (i ewentualnie w prefs – dopisz, jeśli masz taką metodę)
                     TokenInterceptor.clearToken()
-                    // TODO: jeśli masz w UserPreferences metodę typu clearAll() / logout(), wywołaj ją tutaj.
-
                     _state.value = AccountUIState.Deleted("Konto zostało usunięte.")
                 } else if (res.code() == 401 || res.code() == 403) {
                     _state.value = AccountUIState.Error("Sesja wygasła – zaloguj się ponownie.")
@@ -131,7 +128,6 @@ class AccountViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // helper
     private fun Response<*>.errorMsg(): String {
         return try {
             val body = errorBody()?.string()

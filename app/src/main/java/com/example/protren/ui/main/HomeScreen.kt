@@ -58,12 +58,10 @@ fun HomeScreen(
 
     val dashboardState by viewModel.dashboardState.collectAsState()
 
-    // 1) pierwszy load
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
     }
 
-    // 2) nasłuch na powrót z suplementów
     val backEntry by navController.currentBackStackEntryAsState()
     LaunchedEffect(backEntry) {
         val prev = navController.previousBackStackEntry
@@ -74,19 +72,15 @@ fun HomeScreen(
         }
     }
 
-    // nazwa dzisiejszego treningu – NAJPIERW tytuł treningu
     val todayWorkoutName: String? = when (dashboardState) {
         is DashboardUIState.Success -> {
             val s = dashboardState as DashboardUIState.Success
             val w = s.todayWorkout
 
-            // 1) title z logu
             val fromTitle = w?.title?.takeIf { !it.isNullOrBlank() }
 
-            // 2) fallback – pierwsze ćwiczenie
             val fromExercise = w?.exercises?.firstOrNull()?.name
 
-            // 3) fallback – trainingPlanId
             val fromPlan = w?.trainingPlanId
 
             fromTitle ?: fromExercise ?: fromPlan
@@ -94,11 +88,9 @@ fun HomeScreen(
         else -> null
     }
 
-    // id dzisiejszego treningu
     val todayWorkoutId: String? =
         (dashboardState as? DashboardUIState.Success)?.todayWorkout?.id
 
-    // liczba suplementów
     val todaySupplementsCount: Int =
         (dashboardState as? DashboardUIState.Success)?.todaySupplementsCount ?: 0
 
@@ -112,9 +104,7 @@ fun HomeScreen(
                 "Dziś nie masz zaplanowanego treningu"
     }
 
-    // 🔙 przechwycenie systemowego „wstecz” na HomeScreenie
     BackHandler(enabled = true) {
-        // zamiast cofać – pokaż dialog wylogowania
         showLogoutDialog = true
     }
 
@@ -240,7 +230,6 @@ fun HomeScreen(
         }
     }
 
-    // 🔐 Dialog potwierdzenia wylogowania (dla back + menu)
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
@@ -270,8 +259,6 @@ fun HomeScreen(
         )
     }
 }
-
-/* ----------------------------- UI helpers ----------------------------- */
 
 @Composable
 private fun TodayCard(

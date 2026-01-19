@@ -24,9 +24,6 @@ class RegisterViewModel(private val prefs: UserPreferences) : ViewModel() {
     private val _state = MutableStateFlow<RegisterState>(RegisterState.Idle)
     val state: StateFlow<RegisterState> = _state
 
-    /**
-     * @param isTrainer true → rejestrujemy z rolą "trainer"
-     */
     fun register(email: String, password: String, isTrainer: Boolean) {
         _state.value = RegisterState.Loading
         viewModelScope.launch {

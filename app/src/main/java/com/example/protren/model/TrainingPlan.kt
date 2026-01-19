@@ -1,6 +1,5 @@
 package com.example.protren.model
 
-// Używamy już istniejącej klasy Exercise z Twojego modelu (ta sama co w WorkoutLog)
 data class TrainingPlan(
     val id: String,
     val name: String,

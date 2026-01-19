@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.protren.network.TrainerPlanApi
 
-/** Fabryka pod nowy VM (bez repo) */
+
 class TrainerPlansViewModelFactory(
     private val api: TrainerPlanApi
 ) : ViewModelProvider.Factory {

@@ -15,9 +15,6 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import retrofit2.Response
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashboard UI state
-// ─────────────────────────────────────────────────────────────────────────────
 sealed class DashboardUIState {
     data object Loading : DashboardUIState()
     data class Error(val message: String) : DashboardUIState()
@@ -29,13 +26,10 @@ sealed class DashboardUIState {
         val totalSets: Int = 0,
         val totalReps: Int = 0,
         val totalVolume: Int = 0,
-        val todaySupplementsCount: Int = 0 // ile suplementów dziś do wzięcia
+        val todaySupplementsCount: Int = 0
     ) : DashboardUIState()
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Home ViewModel
-// ─────────────────────────────────────────────────────────────────────────────
 class HomeViewModel(
     private val prefs: UserPreferences
 ) : ViewModel() {
@@ -66,7 +60,6 @@ class HomeViewModel(
                 val profileApi = retrofit.create(UserProfileApi::class.java)
                 val supplementApi = retrofit.create(SupplementApi::class.java)
 
-                // ── dane użytkownika (np. email jako prosty "userName") ─────────
                 val userName = runCatching {
                     val res = workoutApi.getUser()
                     if (res.isSuccessful) {
@@ -74,36 +67,28 @@ class HomeViewModel(
                     } else ""
                 }.getOrDefault("")
 
-                // ── profil użytkownika ─────────────────────────────────────────
                 val profile = runCatching {
                     val res = profileApi.getProfile()
                     if (res.isSuccessful) res.body() else null
                 }.getOrNull()
 
-                // ── tygodniowe statystyki ───────────────────────────────────────
                 val weekly = runCatching {
                     val res = workoutApi.getWeeklySummary()
                     if (res.isSuccessful) res.body() else null
                 }.getOrNull()
 
-                // ── ostatni trening (ostatni log, niezależnie od daty) ─────────
                 val lastWorkout = runCatching {
                     val res = workoutApi.getWorkoutLogs()
                     if (res.isSuccessful) {
-                        // zakładamy, że backend sortuje od najnowszego; jeśli nie, sortujesz po date
                         res.body()?.firstOrNull()
                     } else null
                 }.getOrNull()
 
-                // ── dzisiejszy trening ─────────────────────────────────────────
-                // backendowy endpoint /api/workouts/today powinien zwrócić log
-                // dla dzisiejszej daty (z polami: title, status, exercises itd.)
                 val todayWorkout = runCatching {
                     val res = workoutApi.getTodayWorkout()
                     if (res.isSuccessful) res.body() else null
                 }.getOrNull()
 
-                // ── suplementy do wzięcia dziś ─────────────────────────────────
                 val todaySupplementsCount = runCatching {
                     val res = supplementApi.getToday()
                     if (res.isSuccessful) {
@@ -111,7 +96,6 @@ class HomeViewModel(
                     } else 0
                 }.getOrDefault(0)
 
-                // ── aktualizacja stanu UI ──────────────────────────────────────
                 _dashboardState.value = DashboardUIState.Success(
                     userName = userName,
                     profile = profile,
@@ -129,7 +113,6 @@ class HomeViewModel(
         }
     }
 
-    // ── pomocnicza obsługa błędów ──────────────────────────────────────────────
     private fun Response<*>.errorMsg(): String {
         return try {
             val body = errorBody()?.string()

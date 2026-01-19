@@ -55,7 +55,6 @@ fun ProfileScreen(
     val vm: ProfileViewModel = viewModel(factory = ProfileViewModelFactory(app))
     val avatarVm: ProfileAvatarViewModel = viewModel()
 
-    // ViewModel od danych konta (imię, nazwisko, email)
     val accountVm: AccountViewModel = viewModel(factory = AccountViewModelFactory(app))
     val accountState by accountVm.state.collectAsState()
 
@@ -69,7 +68,6 @@ fun ProfileScreen(
 
     var form by remember { mutableStateOf(UserProfile()) }
 
-    // Wyliczamy wyświetlaną nazwę na podstawie stanu konta
     val displayName by remember(accountState) {
         mutableStateOf(
             when (val s = accountState) {
@@ -106,22 +104,19 @@ fun ProfileScreen(
     }
     LaunchedEffect(uploadError) { uploadError?.let { snack.showSnackbar(it) } }
 
-    // po udanym uploadzie zaktualizuj avatar w formularzu
     LaunchedEffect(uploadedAvatar) {
         uploadedAvatar?.let { url ->
             form = form.copy(avatar = url)
         }
     }
 
-    // picker zdjęcia (image/*)
+    // picker zdjęcia
     val pickImage = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { chosen ->
             avatarVm.upload(chosen) { ok, url ->
                 if (ok && url != null) {
-                    // opcjonalnie: natychmiastowy zapis profilu z nowym avatarem
-                    // vm.saveProfile(form.copy(avatar = url))
                 }
             }
         }
@@ -162,7 +157,6 @@ fun ProfileScreen(
                 .padding(padding)
                 .verticalScroll(scroll)
         ) {
-            // === HEADER z avatarem i IMIENIEM / NAZWISKIEM ===
             ProfileHeader(
                 avatar = form.avatar,
                 title = if (displayName.isNotBlank()) displayName else "Profil użytkownika",
@@ -171,7 +165,6 @@ fun ProfileScreen(
                 onChangeAvatar = { pickImage.launch("image/*") },
             )
 
-            // === CONTENT ===
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -234,7 +227,6 @@ fun ProfileScreen(
                     }
                 }
 
-                // Makra
                 ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                     Column(
                         Modifier
@@ -259,7 +251,6 @@ fun ProfileScreen(
                     }
                 }
 
-                // === NOWE: karta z informacją o aktywnej współpracy z trenerem ===
                 if (form.subscriptionActive == true) {
                     ElevatedCard(shape = RoundedCornerShape(24.dp)) {
                         Column(
@@ -273,7 +264,6 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
 
-                            // na razie mamy tylko ID – możesz później dorobić pobranie pełnych danych trenera
                             val trainerId = form.trainerId
                             if (!trainerId.isNullOrBlank()) {
                                 Text(
@@ -387,7 +377,6 @@ private fun ProfileHeader(
     }
 }
 
-/* ----- reszta: bez zmian ----- */
 @Composable
 private fun NumbersGrid(
     age: String, height: String, weight: String,

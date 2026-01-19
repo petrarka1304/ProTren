@@ -59,7 +59,6 @@ fun LoginScreen(navController: NavController) {
         ).create(AuthApi::class.java)
     }
     BackHandler(enabled = true) {
-        // Zamiast cofać aplikację – zamknij aplikację
         (ctx as? Activity)?.finish()
     }
 
