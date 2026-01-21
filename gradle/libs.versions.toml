@@ -22,7 +22,8 @@ espresso = "3.5.1"
 retrofit = "2.9.0"
 okhttp = "4.12.0"
 coroutines = "1.8.1"
-lifecycleRuntimeComposeAndroid = "2.9.4"   # kompatybilne z Kotlin 2.0
+lifecycleRuntimeComposeAndroid = "2.9.4"
+uiTestJunit4Android = "1.10.1"   # kompatybilne z Kotlin 2.0
 
 [libraries]
 # AndroidX bazowe
@@ -63,6 +64,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 androidx-lifecycle-runtime-compose-android = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose-android", version.ref = "lifecycleRuntimeComposeAndroid" }
+androidx-ui-test-junit4-android = { group = "androidx.compose.ui", name = "ui-test-junit4-android", version.ref = "uiTestJunit4Android" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

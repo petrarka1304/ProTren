@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
@@ -20,26 +21,52 @@ import androidx.navigation.NavController
 import com.example.protren.data.UserPreferences
 import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 
-
 @Composable
 fun TrackedExercisesScreen(navController: NavController) {
 
     val context = LocalContext.current
+    // Pamiętamy instancję preferences, ale dane w niej są żywe
     val prefs = remember { UserPreferences(context) }
 
+    // Wczytujemy początkowy stan
     var trackedExercises by remember {
         mutableStateOf(prefs.getTrackedExercises())
     }
 
     val handle = navController.currentBackStackEntry?.savedStateHandle
 
+    // --- KLUCZOWA ZMIANA TUTAJ ---
     LaunchedEffect(handle) {
-        val picked = handle?.get<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
-        if (!picked.isNullOrEmpty()) {
-            prefs.saveTrackedExercises(picked)
-            trackedExercises = prefs.getTrackedExercises()
-            handle.remove<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
+        // Obserwujemy wynik z ekranu wyboru
+        val pickedFlow = handle?.getStateFlow<ArrayList<String>?>(EXERCISE_PICKER_RESULT_NAMES, null)
+
+        pickedFlow?.collect { picked ->
+            if (!picked.isNullOrEmpty()) {
+                // 1. Pobieramy aktualną listę
+                val currentList = prefs.getTrackedExercises().toMutableSet() // Set zapobiega duplikatom
+
+                // 2. Dodajemy nowe (zamiast nadpisywać)
+                currentList.addAll(picked)
+
+                // 3. Zapisujemy połączoną listę
+                val newList = currentList.toList()
+                prefs.saveTrackedExercises(newList)
+
+                // 4. Aktualizujemy widok
+                trackedExercises = newList
+
+                // 5. Czyścimy wynik, aby nie dodał się ponownie przy obrocie ekranu itp.
+                handle.remove<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
+            }
         }
+    }
+
+    // Funkcja pomocnicza do usuwania pojedynczego ćwiczenia
+    fun removeExercise(name: String) {
+        val currentList = trackedExercises.toMutableList()
+        currentList.remove(name)
+        prefs.saveTrackedExercises(currentList)
+        trackedExercises = currentList
     }
 
     Scaffold(
@@ -91,7 +118,7 @@ fun TrackedExercisesScreen(navController: NavController) {
                         ) {
                             Icon(Icons.Filled.Tune, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Wybierz")
+                            Text("Dodaj") // Zmieniłem "Wybierz" na "Dodaj" dla jasności
                         }
 
                         Button(
@@ -142,13 +169,23 @@ fun TrackedExercisesScreen(navController: NavController) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp),
+                                    .padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = name,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
+
+                                // Dodałem przycisk usuwania
+                                IconButton(onClick = { removeExercise(name) }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = "Usuń ćwiczenie",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
                     }

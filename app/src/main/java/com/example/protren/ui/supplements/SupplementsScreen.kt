@@ -5,11 +5,12 @@
 )
 
 package com.example.protren.ui.supplements
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -186,7 +187,7 @@ private fun translateTime(code: String): String = when (code) {
 }
 
 @Composable
-private fun TodayList(
+fun TodayList(
     items: List<Supplement>,
     onToggle: (id: String, take: Boolean) -> Unit,
     onEdit: (id: String) -> Unit,
@@ -220,12 +221,16 @@ private fun TodayList(
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onEdit(id) }
-                    .animateItemPlacement()
-                    .animateContentSize(animationSpec = tween(180))
+                    .animateItem(placementSpec = tween(durationMillis = 180))
+                    .animateContentSize(animationSpec = tween(durationMillis = 180))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = LocalIndication.current
+                    ) { onEdit(id) }
+
             ) {
                 Column(
-                    Modifier
+                    modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)

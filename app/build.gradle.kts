@@ -76,6 +76,7 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.ui.test.junit4.android)
 
     // Desugaring JDK (dla java.time)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
@@ -88,4 +89,6 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+
 }
