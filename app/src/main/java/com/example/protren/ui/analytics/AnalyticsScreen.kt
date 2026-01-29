@@ -75,10 +75,6 @@ fun AnalyticsScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = { vm.refresh() }) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Odśwież")
-                    }
-
                     IconButton(onClick = { navController.navigate("trackedExercises") }) {
                         Icon(Icons.Filled.ShowChart, contentDescription = "Śledzone ćwiczenia")
                     }
@@ -113,9 +109,16 @@ fun AnalyticsScreen(navController: NavController) {
                 val totalVolume = days.sumOf { it.volume }
                 val totalSets = days.sumOf { it.sets }
                 val totalReps = days.sumOf { it.reps }
-                val activeDays = days.count { it.volume > 0 || it.sets > 0 || it.reps > 0 }
-                val avgVolume = if (days.isNotEmpty()) totalVolume.toFloat() / days.size else 0f
-                val avgSets = if (days.isNotEmpty()) totalSets.toFloat() / days.size else 0f
+
+                val trainingDays = days.count { it.volume > 0 || it.sets > 0 || it.reps > 0 }
+
+                val activeDays = trainingDays
+
+                val avgVolumePerTrainingDay =
+                    if (trainingDays > 0) totalVolume.toFloat() / trainingDays else 0f
+
+                val avgSetsPerTrainingDay =
+                    if (trainingDays > 0) totalSets.toFloat() / trainingDays else 0f
 
                 Column(
                     Modifier
@@ -137,8 +140,8 @@ fun AnalyticsScreen(navController: NavController) {
                     ActivityCard(
                         daysCount = days.size,
                         activeDays = activeDays,
-                        avgVolume = avgVolume,
-                        avgSets = avgSets
+                        avgVolumePerTrainingDay = avgVolumePerTrainingDay,
+                        avgSetsPerTrainingDay = avgSetsPerTrainingDay
                     )
 
                     ChartCardPretty(
@@ -168,7 +171,7 @@ fun AnalyticsScreen(navController: NavController) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    "Brak danych 🤷",
+                                    "Brak danych",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
@@ -187,7 +190,6 @@ fun AnalyticsScreen(navController: NavController) {
         }
     }
 }
-
 
 @Composable
 private fun RangeChipsPretty(selected: AnalyticsRange, onSelect: (AnalyticsRange) -> Unit) {
@@ -240,8 +242,8 @@ private fun SummaryPrettyCard(title: String, sets: Int, reps: Int, volume: Int) 
 private fun ActivityCard(
     daysCount: Int,
     activeDays: Int,
-    avgVolume: Float,
-    avgSets: Float
+    avgVolumePerTrainingDay: Float,
+    avgSetsPerTrainingDay: Float
 ) {
     ElevatedCard(shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -265,13 +267,13 @@ private fun ActivityCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatPill(
-                    "Średnia objętość / dzień",
-                    "${avgVolume.toInt()} kg",
+                    "Średnia objętość / dzień treningowy",
+                    "${avgVolumePerTrainingDay.toInt()} kg",
                     Modifier.weight(1f)
                 )
                 StatPill(
-                    "Średnia liczba serii / dzień",
-                    avgSets.toInt().toString(),
+                    "Średnia liczba serii / dzień treningowy",
+                    avgSetsPerTrainingDay.toInt().toString(),
                     Modifier.weight(1f)
                 )
             }

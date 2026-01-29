@@ -218,8 +218,6 @@ private fun TrainerCard(
     val ratingAvg = t.ratingAvg ?: 0.0
     val ratingCount = t.ratingCount ?: 0
     val priceText = t.priceMonth?.let { "${it.toInt()} zł / mies." } ?: "Cena ustalana indywidualnie"
-
-    // ✅ Normalizacja URL zdjęcia (z R2 lub starego serwera)
     val avatarUrl = remember(t.avatarUrl) { normalizeUrl(t.avatarUrl) }
 
     ElevatedCard(
@@ -233,7 +231,6 @@ private fun TrainerCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // ✅ ZMIANA: Obsługa zdjęcia z fallbackiem do ikony
                 Box(
                     modifier = Modifier
                         .size(52.dp)
@@ -252,7 +249,6 @@ private fun TrainerCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // Jeśli brak zdjęcia, wyświetlamy ikonkę
                         Icon(
                             imageVector = Icons.Filled.Person,
                             contentDescription = null,

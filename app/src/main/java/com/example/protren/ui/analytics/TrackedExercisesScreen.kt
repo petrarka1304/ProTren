@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.protren.data.UserPreferences
 import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 
@@ -25,48 +26,39 @@ import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 fun TrackedExercisesScreen(navController: NavController) {
 
     val context = LocalContext.current
-    // Pamiętamy instancję preferences, ale dane w niej są żywe
     val prefs = remember { UserPreferences(context) }
+    val scope = rememberCoroutineScope()
 
-    // Wczytujemy początkowy stan
-    var trackedExercises by remember {
-        mutableStateOf(prefs.getTrackedExercises())
+    var trackedExercises by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        trackedExercises = prefs.getTrackedExercises()
     }
 
-    val handle = navController.currentBackStackEntry?.savedStateHandle
+    val backStackEntry by navController.currentBackStackEntryAsState()
 
-    // --- KLUCZOWA ZMIANA TUTAJ ---
-    LaunchedEffect(handle) {
-        // Obserwujemy wynik z ekranu wyboru
-        val pickedFlow = handle?.getStateFlow<ArrayList<String>?>(EXERCISE_PICKER_RESULT_NAMES, null)
+    LaunchedEffect(backStackEntry) {
+        val handle = backStackEntry?.savedStateHandle ?: return@LaunchedEffect
 
-        pickedFlow?.collect { picked ->
-            if (!picked.isNullOrEmpty()) {
-                // 1. Pobieramy aktualną listę
-                val currentList = prefs.getTrackedExercises().toMutableSet() // Set zapobiega duplikatom
+        handle.getStateFlow<ArrayList<String>?>(EXERCISE_PICKER_RESULT_NAMES, null)
+            .collect { picked ->
+                if (!picked.isNullOrEmpty()) {
 
-                // 2. Dodajemy nowe (zamiast nadpisywać)
-                currentList.addAll(picked)
-
-                // 3. Zapisujemy połączoną listę
-                val newList = currentList.toList()
-                prefs.saveTrackedExercises(newList)
-
-                // 4. Aktualizujemy widok
-                trackedExercises = newList
-
-                // 5. Czyścimy wynik, aby nie dodał się ponownie przy obrocie ekranu itp.
-                handle.remove<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
+                    val current = prefs.getTrackedExercises().toMutableSet()
+                    current.addAll(picked)
+                    val newList = current.toList()
+                    prefs.saveTrackedExercises(newList)
+                    trackedExercises = newList
+                    handle[EXERCISE_PICKER_RESULT_NAMES] = null
+                }
             }
-        }
     }
 
-    // Funkcja pomocnicza do usuwania pojedynczego ćwiczenia
     fun removeExercise(name: String) {
-        val currentList = trackedExercises.toMutableList()
-        currentList.remove(name)
-        prefs.saveTrackedExercises(currentList)
-        trackedExercises = currentList
+        val updated = trackedExercises.toMutableList()
+        updated.remove(name)
+        prefs.saveTrackedExercises(updated)
+        trackedExercises = updated
     }
 
     Scaffold(
@@ -102,7 +94,7 @@ fun TrackedExercisesScreen(navController: NavController) {
                     )
 
                     Text(
-                        text = "Progres liczony jest na podstawie wykonanych treningów z ostatnich 30 dni.",
+                        text = "Progres liczony jest na podstawie wykonanych treningów.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
@@ -111,20 +103,16 @@ fun TrackedExercisesScreen(navController: NavController) {
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = {
-                                navController.navigate("exercisePicker")
-                            },
+                            onClick = { navController.navigate("exercisePicker") },
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(Icons.Filled.Tune, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Dodaj") // Zmieniłem "Wybierz" na "Dodaj" dla jasności
+                            Text("Dodaj")
                         }
 
                         Button(
-                            onClick = {
-                                navController.navigate("trackedExercisesProgress")
-                            },
+                            onClick = { navController.navigate("trackedExercisesProgress") },
                             enabled = trackedExercises.isNotEmpty(),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -169,7 +157,12 @@ fun TrackedExercisesScreen(navController: NavController) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 8.dp),
+                                    .padding(
+                                        start = 14.dp,
+                                        top = 8.dp,
+                                        bottom = 8.dp,
+                                        end = 8.dp
+                                    ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
@@ -178,7 +171,6 @@ fun TrackedExercisesScreen(navController: NavController) {
                                     style = MaterialTheme.typography.bodyLarge
                                 )
 
-                                // Dodałem przycisk usuwania
                                 IconButton(onClick = { removeExercise(name) }) {
                                     Icon(
                                         imageVector = Icons.Filled.Delete,

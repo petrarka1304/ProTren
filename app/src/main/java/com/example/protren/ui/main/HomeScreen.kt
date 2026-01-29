@@ -9,9 +9,9 @@ package com.example.protren.ui.main
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,8 +20,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,7 +36,15 @@ import com.example.protren.data.UserPreferences
 import com.example.protren.navigation.NavItem
 import com.example.protren.viewmodel.DashboardUIState
 import com.example.protren.viewmodel.HomeViewModel
+import com.example.protren.network.ApiClient
+import com.example.protren.network.WorkoutApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 private object Dimens {
     val ScreenPadding = 16.dp
@@ -58,8 +69,57 @@ fun HomeScreen(
 
     val dashboardState by viewModel.dashboardState.collectAsState()
 
+    var todayLogId by remember { mutableStateOf<String?>(null) }
+    var todayLogTitle by remember { mutableStateOf<String?>(null) }
+    var todayLogStatus by remember { mutableStateOf<String?>(null) }
+
+    suspend fun refreshTodayFromWorkoutsList() {
+        try {
+            val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: return
+            val api = ApiClient.createWithAuth(
+                tokenProvider = { token },
+                onUnauthorized = { }
+            ).create(WorkoutApi::class.java)
+
+            val res = withContext(Dispatchers.IO) { api.getWorkoutLogs() }
+            if (!res.isSuccessful) return
+
+            val today = LocalDate.now().toString()
+            val todays = res.body().orEmpty().filter { log ->
+                val logDate = log.date?.take(10) ?: ""
+                logDate == today
+            }
+
+            val done = todays.firstOrNull { it.status == "done" }
+            val planned = todays.firstOrNull { it.status == "planned" }
+            val pick = done ?: planned ?: todays.firstOrNull()
+
+            todayLogId = pick?.id
+            todayLogTitle = pick?.title
+            todayLogStatus = pick?.status
+        } catch (_: Exception) {
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadDashboardData()
+        refreshTodayFromWorkoutsList()
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadDashboardData()
+                scope.launch {
+                    refreshTodayFromWorkoutsList()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     val backEntry by navController.currentBackStackEntryAsState()
@@ -68,40 +128,33 @@ fun HomeScreen(
         val changed = prev?.savedStateHandle?.get<Boolean>("supplements_changed") ?: false
         if (changed) {
             viewModel.loadDashboardData()
+            refreshTodayFromWorkoutsList()
             prev?.savedStateHandle?.set("supplements_changed", false)
         }
     }
 
-    val todayWorkoutName: String? = when (dashboardState) {
+    val todayWorkoutNameFromDashboard: String? = when (dashboardState) {
         is DashboardUIState.Success -> {
             val s = dashboardState as DashboardUIState.Success
             val w = s.todayWorkout
-
             val fromTitle = w?.title?.takeIf { !it.isNullOrBlank() }
-
             val fromExercise = w?.exercises?.firstOrNull()?.name
-
-            val fromPlan = w?.trainingPlanId
-
-            fromTitle ?: fromExercise ?: fromPlan
+            fromTitle ?: fromExercise
         }
         else -> null
     }
-
-    val todayWorkoutId: String? =
-        (dashboardState as? DashboardUIState.Success)?.todayWorkout?.id
 
     val todaySupplementsCount: Int =
         (dashboardState as? DashboardUIState.Success)?.todaySupplementsCount ?: 0
 
     val todayPlanText = when (dashboardState) {
         DashboardUIState.Loading -> "Ładuję dzisiejszy trening…"
-        is DashboardUIState.Error -> "Nie udało się pobrać dzisiejszego treningu"
-        is DashboardUIState.Success ->
-            if (todayWorkoutName != null)
-                "Dziś masz zaplanowany trening: $todayWorkoutName"
-            else
-                "Dziś nie masz zaplanowanego treningu"
+        is DashboardUIState.Error -> "Błąd pobierania danych"
+        is DashboardUIState.Success -> {
+            todayLogTitle?.takeIf { it.isNotBlank() }
+                ?: todayWorkoutNameFromDashboard
+                ?: "Trening"
+        }
     }
 
     BackHandler(enabled = true) {
@@ -164,10 +217,9 @@ fun HomeScreen(
             TodayCard(
                 text = todayPlanText,
                 height = Dimens.BigCardHeight,
+                status = todayLogStatus,
                 onClick = {
-                    if (todayWorkoutId != null) {
-                        navController.navigate("workouts/$todayWorkoutId")
-                    } else {
+                    if (todayLogStatus == null) {
                         navController.navigate(NavItem.AddWorkout)
                     }
                 }
@@ -183,7 +235,7 @@ fun HomeScreen(
                     Tile("Rekordy osobiste", Icons.Filled.LocalFireDepartment) {
                         navController.navigate("pr")
                     },
-                    Tile("Treningi", Icons.Filled.History) {          // 🔁 tu zmiana
+                    Tile("Treningi", Icons.Filled.History) {
                         navController.navigate(NavItem.Workouts)
                     },
                     Tile("Generator planu", Icons.Filled.AutoAwesome) {
@@ -264,26 +316,46 @@ fun HomeScreen(
 private fun TodayCard(
     text: String,
     height: Dp,
+    status: String?,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(Dimens.CardCorner)
-    val gradient = Brush.linearGradient(
-        listOf(
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+
+    val isDone = status == "done"
+    val isPlanned = status == "planned"
+    val isEnabled = status == null
+
+    val backgroundBrush = when {
+        isDone -> Brush.linearGradient(
+            listOf(Color(0xFFE8F5E9), Color(0xFFC8E6C9))
         )
-    )
+        isPlanned -> Brush.linearGradient(
+            listOf(
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            )
+        )
+        else -> Brush.linearGradient( // Domyślny (Zaczynamy)
+            listOf(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            )
+        )
+    }
+
     ElevatedCard(
         onClick = onClick,
+        enabled = isEnabled,
         shape = shape,
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
+            .alpha(if (isEnabled) 1f else 0.95f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(gradient)
+                .background(backgroundBrush)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -291,31 +363,55 @@ private fun TodayCard(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Dzisiaj", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text,
+                    text = when {
+                        isDone -> "Świetna robota!"
+                        isPlanned -> "Plan na dziś"
+                        else -> "Dzisiaj"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isDone) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (status == null && text == "Trening") "Dodaj trening" else text,
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+
+
             Surface(
-                modifier = Modifier.size(104.dp),
+                modifier = Modifier
+                    .size(104.dp)
+                    .pointerInput(Unit) { },
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer
+                color = when {
+                    isDone -> Color(0xFF4CAF50)
+                    isPlanned -> MaterialTheme.colorScheme.primaryContainer
+                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                }
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.Filled.FitnessCenter,
+                            imageVector = when {
+                                isDone -> Icons.Filled.CheckCircle
+                                isPlanned -> Icons.Filled.EventAvailable
+                                else -> Icons.Filled.FitnessCenter
+                            },
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            tint = if (isDone) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Zaczynamy",
+                            text = when {
+                                isDone -> "Wykonany"
+                                isPlanned -> "Zaplanowano"
+                                else -> "Zaczynamy"
+                            },
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = if (isDone) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
@@ -412,3 +508,4 @@ private fun RemindersCard(count: Int, onShow: () -> Unit) {
         }
     }
 }
+

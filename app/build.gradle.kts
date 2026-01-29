@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.example.protren"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.protren"
         minSdk = 23
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -27,7 +27,7 @@ android {
         }
     }
 
-    // Java/Kotlin 17 + desugaring (dla java.time na starszych API)
+    // Java/Kotlin 17
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -43,7 +43,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-
+    implementation(libs.material3)
     // Compose BOM + UI
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -53,11 +53,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("io.coil-kt:coil-compose:2.6.0")
 
-
-    // (opcjonalnie) Material 2 – jeśli nadal używasz pojedynczych komponentów z M2
     implementation("androidx.compose.material:material")
 
-    // Ikony rozszerzone (ContentCopy itp.)
     implementation(libs.androidx.material.icons.extended)
 
 
@@ -76,7 +73,7 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.androidx.ui.test.junit4.android)
+
 
     // Desugaring JDK (dla java.time)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
@@ -90,5 +87,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
-
+    testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

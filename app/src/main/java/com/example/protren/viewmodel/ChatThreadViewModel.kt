@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.protren.data.UserPreferences
 import com.example.protren.network.*
 import com.example.protren.util.ImageUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
 class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
@@ -65,10 +67,12 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
     val otherLastActiveAt: StateFlow<String?> = _otherLastActiveAt
 
     private var chatId: String? = null
-    private var typingJob: Job? = null
     private var endReached = false
     private var isLoadingMore = false
     private val signedUrlCache = ConcurrentHashMap<String, String>()
+
+    private var lastTypingSent: Boolean? = null
+    private var stopTypingJob: Job? = null
 
     fun load(id: String) {
         chatId = id
@@ -77,6 +81,10 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
         endReached = false
 
         _myUserId.value = prefs.getUserId()
+
+        lastTypingSent = null
+        stopTypingJob?.cancel()
+        stopTypingJob = null
 
         viewModelScope.launch {
             try {
@@ -114,6 +122,7 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
     fun loadMore() {
         val id = chatId ?: return
         if (isLoadingMore || endReached) return
@@ -209,7 +218,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
                     fallback.body()
                 } ?: return@launch onDone(false)
 
-
                 val dto = ChatMessageDto(
                     id = msgFromServer.id,
                     chatId = msgFromServer.chatId,
@@ -272,7 +280,6 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
                     fallback.body()
                 } ?: return@launch onDone(false)
 
-
                 val dto = ChatMessageDto(
                     id = msgFromServer.id,
                     chatId = msgFromServer.chatId,
@@ -293,10 +300,41 @@ class ChatThreadViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setTyping(isTyping: Boolean) {
         val id = chatId ?: return
-        typingJob?.cancel()
-        typingJob = viewModelScope.launch {
-            delay(250)
-            runCatching { chatApi.setTyping(id, TypingRequest(value = isTyping)) }
+
+        if (!isTyping) {
+            stopTypingJob?.cancel()
+            stopTypingJob = null
+
+            if (lastTypingSent != false) {
+                lastTypingSent = false
+                viewModelScope.launch { safeSendTyping(id, false) }
+            }
+            return
+        }
+
+        if (lastTypingSent != true) {
+            lastTypingSent = true
+            viewModelScope.launch { safeSendTyping(id, true) }
+        }
+
+        stopTypingJob?.cancel()
+        stopTypingJob = viewModelScope.launch {
+            delay(1500)
+            if (lastTypingSent == true) {
+                lastTypingSent = false
+                safeSendTyping(id, false)
+            }
+        }
+    }
+
+    private suspend fun safeSendTyping(id: String, value: Boolean) {
+        try {
+            chatApi.setTyping(id, TypingRequest(value = value))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            if (e.message?.contains("Canceled", ignoreCase = true) == true) return
+        } catch (_: Exception) {
         }
     }
 

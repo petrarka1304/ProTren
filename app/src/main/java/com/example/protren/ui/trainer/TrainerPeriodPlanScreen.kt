@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -73,7 +75,6 @@ fun TrainerPeriodPlanScreen(
 
     val state by vm.state.collectAsState()
 
-    LaunchedEffect(Unit) { vm.buildCalendar(startDate, weeks, force = true) }
     LaunchedEffect(startDate, weeks) { vm.buildCalendar(startDate, weeks) }
 
     Scaffold(
@@ -84,7 +85,7 @@ fun TrainerPeriodPlanScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            vm.buildCalendar(startDate, weeks, force = true)
+                            vm.buildCalendar(startDate, weeks)
                             scope.launch { snackbar.showSnackbar("Przebudowano kalendarz") }
                         }
                     ) { Icon(Icons.Filled.Refresh, contentDescription = "Odśwież") }
@@ -141,7 +142,7 @@ fun TrainerPeriodPlanScreen(
                         planName = planName,
                         onPlanNameChange = { planName = it },
                         onRebuild = {
-                            vm.buildCalendar(startDate, weeks, force = true)
+                            vm.buildCalendar(startDate, weeks)
                             scope.launch { snackbar.showSnackbar("Przebudowano kalendarz") }
                         }
                     )
@@ -228,7 +229,7 @@ fun TrainerPeriodPlanScreen(
                                 startDate = Instant.ofEpochMilli(millis)
                                     .atZone(ZoneId.systemDefault())
                                     .toLocalDate()
-                                vm.buildCalendar(startDate, weeks, force = true)
+                                vm.buildCalendar(startDate, weeks)
                             }
                             showDatePicker = false
                         }) { Text("OK") }
@@ -726,24 +727,15 @@ private fun DayEditorSheet(
                 }
 
                 1 -> {
-                    var notes by remember(date) { mutableStateOf("") }
-
                     OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
+                        value = day.notes,
+                        onValueChange = { vm.updateDayNotes(date, it) },
                         label = { Text("Notatki dnia") },
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    OutlinedButton(
-                        onClick = { scope.launch { snackbar.showSnackbar("Notatki: podłącz zapis w VM jeśli chcesz.") } },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text("Zapisz notatki")
-                    }
                 }
+
             }
 
             Spacer(Modifier.height(12.dp))
@@ -757,6 +749,19 @@ private fun ExerciseRow(
     onChange: (Exercise) -> Unit,
     onDelete: () -> Unit
 ) {
+    // Bufory tekstu – dzięki temu można wpisywać/usuwać normalnie
+    var nameText by remember(exercise.name) { mutableStateOf(exercise.name ?: "") }
+    var setsText by remember(exercise.sets) {
+        mutableStateOf(exercise.sets?.takeIf { it > 0 }?.toString() ?: "")
+    }
+    var repsText by remember(exercise.reps) {
+        mutableStateOf(exercise.reps?.takeIf { it > 0 }?.toString() ?: "")
+    }
+    var weightText by remember(exercise.weight) {
+        mutableStateOf(exercise.weight?.toString() ?: "")
+    }
+    var notesText by remember(exercise.notes) { mutableStateOf(exercise.notes ?: "") }
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp)
@@ -768,40 +773,64 @@ private fun ExerciseRow(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedTextField(
-                value = exercise.name ?: "",
-                onValueChange = { onChange(exercise.copy(name = it)) },
+                value = nameText,
+                onValueChange = {
+                    nameText = it
+                    onChange(exercise.copy(name = it))
+                },
                 label = { Text("Ćwiczenie") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = exercise.sets?.toString() ?: "",
-                    onValueChange = { v -> v.toIntOrNull()?.let { onChange(exercise.copy(sets = it)) } },
+                    value = setsText,
+                    onValueChange = { input ->
+                        val clean = input.filter { it.isDigit() }.take(3)
+                        setsText = clean
+                        onChange(exercise.copy(sets = clean.toIntOrNull()))
+                    },
                     label = { Text("Serie") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)
                 )
+
                 OutlinedTextField(
-                    value = exercise.reps?.toString() ?: "",
-                    onValueChange = { v -> v.toIntOrNull()?.let { onChange(exercise.copy(reps = it)) } },
+                    value = repsText,
+                    onValueChange = { input ->
+                        val clean = input.filter { it.isDigit() }.take(3)
+                        repsText = clean
+                        onChange(exercise.copy(reps = clean.toIntOrNull() ?: 0))
+                    },
                     label = { Text("Powtórzenia") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)
                 )
+
+                // WERSJA DLA weight = Int? (tak jak masz teraz w tym ekranie)
                 OutlinedTextField(
-                    value = exercise.weight?.toString() ?: "",
-                    onValueChange = { v -> v.toIntOrNull()?.let { onChange(exercise.copy(weight = it)) } },
+                    value = weightText,
+                    onValueChange = { input ->
+                        val clean = input.filter { it.isDigit() }.take(5)
+                        weightText = clean
+                        onChange(exercise.copy(weight = clean.toIntOrNull() ?: 0))
+                    },
                     label = { Text("Ciężar") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f)
                 )
             }
 
             OutlinedTextField(
-                value = exercise.notes ?: "",
-                onValueChange = { onChange(exercise.copy(notes = it)) },
-                label = { Text("Notatki") },
+                value = notesText,
+                onValueChange = {
+                    notesText = it
+                    onChange(exercise.copy(notes = it))
+                },
+                label = { Text("Notatki do ćwiczenia") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -815,6 +844,7 @@ private fun ExerciseRow(
         }
     }
 }
+
 
 @Composable
 private fun TraineePickerSheet(

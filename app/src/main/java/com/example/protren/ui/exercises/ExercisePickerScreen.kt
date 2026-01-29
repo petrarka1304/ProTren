@@ -36,8 +36,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/*limity*/
-
 private const val MAX_QUERY_LEN = 60
 private const val MAX_EXERCISE_NAME_LEN = 60
 private const val MAX_GROUP_LEN = 30
@@ -51,7 +49,6 @@ private fun sanitizeSingleLine(input: String, maxLen: Int): String {
     val collapsed = oneLine.replace(Regex("\\s+"), " ")
     return collapsed.take(maxLen)
 }
-
 
 private data class CategoryUi(
     val key: String,
@@ -88,7 +85,6 @@ private fun categoryUiForKey(key: String): CategoryUi {
     }
 }
 
-
 private data class BodyPartUi(
     val key: String,
     val label: String,
@@ -124,7 +120,6 @@ const val EXERCISE_PICKER_RESULT_IDS = "picked_exercise_ids"
 const val EXERCISE_PICKER_RESULT_NAMES = "picked_exercise_names"
 const val EXERCISE_PICKER_PRESELECTED_IDS = "picker_preselected_ids"
 
-
 private fun ExerciseDto.toUi() = ExerciseUi(
     id = _id,
     name = name,
@@ -150,6 +145,8 @@ fun ExercisePickerScreen(navController: NavController) {
     }
     val selected = remember { mutableStateListOf<String>() }
 
+    val selectedNames = remember { mutableStateMapOf<String, String>() }
+
     LaunchedEffect(initialPreselected) {
         if (initialPreselected.isNotEmpty()) {
             selected.clear()
@@ -158,11 +155,15 @@ fun ExercisePickerScreen(navController: NavController) {
         }
     }
 
+    LaunchedEffect(data.size, selected.size) {
+        data.filter { it.id in selected }.forEach { ex ->
+            selectedNames[ex.id] = ex.name
+        }
+    }
+
     var query by rememberSaveable { mutableStateOf("") }
     var selectedCategoryKey by rememberSaveable { mutableStateOf("") }
-
     var selectedBodyPartKey by rememberSaveable { mutableStateOf("all") }
-
     var selectedEquipment by rememberSaveable { mutableStateOf("Sprzęt: wszystkie") }
     var mineOnly by rememberSaveable { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
@@ -193,15 +194,6 @@ fun ExercisePickerScreen(navController: NavController) {
                 isLoading = false
                 loadError = msg
                 scope.launch { snackbar.showSnackbar(msg) }
-            }
-        )
-    }
-
-    val categoriesUi by remember(data) {
-        mutableStateOf(
-            buildList {
-                val keys = data.map { normalizeGroupKey(it.group) }.distinct().sorted()
-                keys.forEach { add(categoryUiForKey(it)) }
             }
         )
     }
@@ -248,7 +240,15 @@ fun ExercisePickerScreen(navController: NavController) {
 
     fun finishAndReturn() {
         val ids = java.util.ArrayList(selected)
-        val names = java.util.ArrayList(data.filter { it.id in selected }.map { it.name })
+
+        val names = java.util.ArrayList(
+            selected.map { id ->
+                selectedNames[id]
+                    ?: data.firstOrNull { it.id == id }?.name
+                    ?: id
+            }
+        )
+
         val backEntry = navController.previousBackStackEntry ?: navController.currentBackStackEntry
         backEntry?.savedStateHandle?.apply {
             set(EXERCISE_PICKER_RESULT_IDS, ids)
@@ -433,7 +433,6 @@ fun ExercisePickerScreen(navController: NavController) {
                         }
                     }
 
-
                     item {
                         Row(
                             Modifier
@@ -522,7 +521,6 @@ fun ExercisePickerScreen(navController: NavController) {
                         }
                     }
 
-                    // LISTA
                     if (filtered.isEmpty()) {
                         item {
                             Box(
@@ -539,9 +537,12 @@ fun ExercisePickerScreen(navController: NavController) {
                                 ),
                                 selected = isSelected,
                                 onToggle = {
-                                    if (isSelected) selected.remove(ex.id)
-                                    else {
+                                    if (isSelected) {
+                                        selected.remove(ex.id)
+                                        selectedNames.remove(ex.id)
+                                    } else {
                                         selected.add(ex.id)
+                                        selectedNames[ex.id] = ex.name
                                         scope.launch { snackbar.showSnackbar("Dodano: ${ex.name}") }
                                     }
                                 },
@@ -586,7 +587,6 @@ fun ExercisePickerScreen(navController: NavController) {
         }
     }
 
-    // DODAWANIE WŁASNEGO ĆWICZENIA
     if (showAddSheet) {
         AddCustomExerciseSheet(
             presetGroup = selectedCategoryKey.takeIf { it != "all" }?.let { categoryUiForKey(it).label },
@@ -634,6 +634,7 @@ fun ExercisePickerScreen(navController: NavController) {
                             val ex = dto.toUi().copy(isCustom = true)
                             data.add(0, ex)
                             selected.add(ex.id)
+                            selectedNames[ex.id] = ex.name
                             snackbar.showSnackbar("Dodano własne ćwiczenie: ${ex.name}")
                             showAddSheet = false
                         } else {
@@ -896,6 +897,7 @@ private suspend fun fetchAllExercisesByQuery(
 
     return all.values.toList()
 }
+
 private suspend fun fetchAllExercises(
     ctx: Context,
     equipment: String?,

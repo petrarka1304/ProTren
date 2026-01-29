@@ -2,6 +2,8 @@
 
 package com.example.protren.ui.workouts
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,8 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -32,6 +37,8 @@ import com.example.protren.network.ApiClient
 import com.example.protren.network.WorkoutApi
 import com.example.protren.data.UserPreferences
 import com.example.protren.model.WorkoutLog
+import com.example.protren.model.Exercise
+import com.example.protren.network.UpdateWorkoutRequest
 
 private const val WORKOUTS_ROUTE = "workouts"
 private const val RESULT_KEY = "new_workout_item"
@@ -54,7 +61,6 @@ private fun inferStatusFromDate(rawDate: String?): String {
         when {
             ld == null -> "done"
             ld.isAfter(today) -> "planned"
-            ld.isBefore(today) -> "done"
             else -> "done"
         }
     } catch (_: Exception) {
@@ -62,6 +68,17 @@ private fun inferStatusFromDate(rawDate: String?): String {
     }
 }
 
+private fun isToday(dateStr: String): Boolean {
+    return try {
+        val today = LocalDate.now()
+        val ld = LocalDate.parse(dateStr.take(10), DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        ld == today
+    } catch (_: Exception) {
+        false
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WorkoutsListScreen(navController: NavController) {
     val snackbar = remember { SnackbarHostState() }
@@ -72,8 +89,10 @@ fun WorkoutsListScreen(navController: NavController) {
     var items by remember { mutableStateOf<List<WorkoutListItemUi>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var deletingId by remember { mutableStateOf<String?>(null) }
-
     var filter by rememberSaveable { mutableStateOf(WorkoutFilter.ALL) }
+
+    var markDoneDialogFor by remember { mutableStateOf<WorkoutListItemUi?>(null) }
+    var markingDone by remember { mutableStateOf(false) }
 
     suspend fun fetchWorkouts(): List<WorkoutListItemUi> {
         val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: ""
@@ -84,24 +103,72 @@ fun WorkoutsListScreen(navController: NavController) {
 
         val res = withContext(Dispatchers.IO) { api.getWorkoutLogs() }
         return if (res.isSuccessful) {
-            res.body().orEmpty().sortedByDescending { it.date ?: "" }.map {
-                val ex = it.exercises.orEmpty()
-                val totalSets = ex.sumOf { e -> e.sets ?: 0 }
-                val totalVol = ex.sumOf { e -> (e.sets ?: 0) * (e.reps ?: 0) * (e.weight ?: 0) }
+            res.body().orEmpty()
+                .sortedByDescending { it.date ?: "" }
+                .map {
+                    val ex = it.exercises.orEmpty()
+                    val totalSets = ex.sumOf { e -> e.sets ?: 0 }
+                    val totalVol = ex.sumOf { e -> (e.sets ?: 0) * (e.reps ?: 0) * (e.weight ?: 0) }
+                    val finalStatus = if (!it.status.isNullOrBlank()) it.status else inferStatusFromDate(it.date)
+                    val cleanTitle = it.title?.replace("Plan treningowy", "", ignoreCase = true)
+                        ?.replace("Plan", "", ignoreCase = true)
+                        ?.replace("-", "")
+                        ?.trim()
+                        ?.replaceFirstChar { char -> char.uppercase() } ?: "Trening"
 
-                val status = it.status ?: inferStatusFromDate(it.date)
-
-                WorkoutListItemUi(
-                    id = it.id ?: UUID.randomUUID().toString(),
-                    date = (it.date ?: "—").take(10),
-                    title = "Trening",
-                    volume = "${ex.size} ćw • $totalSets serii • $totalVol kg",
-                    status = status
-                )
-            }
+                    WorkoutListItemUi(
+                        id = it.id ?: UUID.randomUUID().toString(),
+                        date = (it.date ?: "—").take(10),
+                        title = cleanTitle,
+                        volume = "${ex.size} ćw • $totalSets serii • $totalVol kg",
+                        status = finalStatus
+                    )
+                }
         } else {
             scope.launch { snackbar.showSnackbar("Błąd pobierania: HTTP ${res.code()}") }
             emptyList()
+        }
+    }
+
+    suspend fun markWorkoutDone(id: String) {
+        markingDone = true
+        try {
+            val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: ""
+            val api = ApiClient.createWithAuth(tokenProvider = { token })
+                .create(WorkoutApi::class.java)
+
+            val getRes = withContext(Dispatchers.IO) { api.getWorkout(id) }
+            if (!getRes.isSuccessful) {
+                snackbar.showSnackbar("Nie udało się pobrać treningu (HTTP ${getRes.code()})")
+                return
+            }
+
+            val workout = getRes.body() ?: run {
+                snackbar.showSnackbar("Brak danych treningu")
+                return
+            }
+
+            val today = LocalDate.now().toString()
+
+            val req = UpdateWorkoutRequest(
+                date = today,
+                title = workout.title,
+                exercises = workout.exercises.orEmpty(),
+                trainingPlanId = workout.trainingPlanId,
+                status = "done"
+            )
+
+            val updRes = withContext(Dispatchers.IO) { api.updateWorkout(id, req) }
+            if (updRes.isSuccessful) {
+                snackbar.showSnackbar("Oznaczono jako wykonany")
+                items = fetchWorkouts()
+            } else {
+                snackbar.showSnackbar("Nie udało się oznaczyć (HTTP ${updRes.code()})")
+            }
+        } catch (e: Exception) {
+            snackbar.showSnackbar("Błąd sieci: ${e.localizedMessage ?: "nieznany"}")
+        } finally {
+            markingDone = false
         }
     }
 
@@ -109,6 +176,22 @@ fun WorkoutsListScreen(navController: NavController) {
         loading = true
         items = fetchWorkouts()
         loading = false
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val handle = navController.currentBackStackEntry?.savedStateHandle
+                val refresh = handle?.get<Boolean>("refresh_workouts") ?: false
+                if (refresh) {
+                    scope.launch { items = fetchWorkouts() }
+                    handle?.remove<Boolean>("refresh_workouts")
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(Unit) {
@@ -208,17 +291,13 @@ fun WorkoutsListScreen(navController: NavController) {
 
             when {
                 loading -> Box(
-                    Modifier
-                        .fillMaxSize(),
+                    Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                ) { CircularProgressIndicator() }
 
                 items.isEmpty() -> {
                     Box(
-                        Modifier
-                            .fillMaxSize(),
+                        Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         ElevatedCard(shape = RoundedCornerShape(24.dp)) {
@@ -251,10 +330,29 @@ fun WorkoutsListScreen(navController: NavController) {
                         contentPadding = PaddingValues(bottom = 100.dp)
                     ) {
                         items(filteredItems, key = { it.id }) { w ->
+                            val eligibleForDone = w.status == "planned" && isToday(w.date)
+                            val isCompleted = w.status == "done"
+
                             ElevatedCard(
-                                onClick = { navController.navigate("editWorkout/${w.id}") },
                                 shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { navController.navigate("editWorkout/${w.id}") },
+                                        onLongClick = {
+                                            if (eligibleForDone) {
+                                                markDoneDialogFor = w
+                                            } else {
+                                                scope.launch {
+                                                    if (w.status != "planned") {
+                                                        snackbar.showSnackbar("Ten trening jest już oznaczony jako wykonany.")
+                                                    } else {
+                                                        snackbar.showSnackbar("Tylko treningi zaplanowane na dziś można oznaczyć jako wykonane.")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    )
                             ) {
                                 Column(Modifier.padding(16.dp)) {
                                     Row(
@@ -264,14 +362,15 @@ fun WorkoutsListScreen(navController: NavController) {
                                         Icon(
                                             Icons.Filled.FitnessCenter,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
+                                            tint = if (isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                                         )
                                         Spacer(Modifier.width(12.dp))
                                         Column(Modifier.weight(1f)) {
                                             Text(
                                                 w.title,
                                                 style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isCompleted) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                                             )
                                             Text(
                                                 w.date,
@@ -284,19 +383,22 @@ fun WorkoutsListScreen(navController: NavController) {
                                             onClick = {},
                                             enabled = false,
                                             label = {
-                                                Text(
-                                                    if (w.status == "planned") "Zaplanowany" else "Wykonany"
-                                                )
-                                            }
+                                                Text(if (isCompleted) "Wykonany" else "Zaplanowany")
+                                            },
+                                            colors = AssistChipDefaults.assistChipColors(
+                                                disabledLabelColor = if (isCompleted)
+                                                    MaterialTheme.colorScheme.primary
+                                                else
+                                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         )
 
                                         Spacer(Modifier.width(8.dp))
 
-                                        IconButton(onClick = {
-                                            navController.navigate("editWorkout/${w.id}")
-                                        }) {
+                                        IconButton(onClick = { navController.navigate("editWorkout/${w.id}") }) {
                                             Icon(Icons.Filled.Edit, contentDescription = "Edytuj")
                                         }
+
                                         IconButton(
                                             enabled = deletingId != w.id,
                                             onClick = { scope.launch { deleteWorkout(w.id) } }
@@ -311,12 +413,23 @@ fun WorkoutsListScreen(navController: NavController) {
                                             }
                                         }
                                     }
+
                                     Spacer(Modifier.height(8.dp))
                                     Text(
                                         w.volume,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+
+                                    if (eligibleForDone) {
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(
+                                            "Przytrzymaj, aby oznaczyć jako wykonany",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -324,5 +437,43 @@ fun WorkoutsListScreen(navController: NavController) {
                 }
             }
         }
+    }
+
+    if (markDoneDialogFor != null) {
+        val w = markDoneDialogFor!!
+        AlertDialog(
+            onDismissRequest = { if (!markingDone) markDoneDialogFor = null },
+            title = { Text("Oznaczyć jako wykonany?") },
+            text = {
+                Column {
+                    Text("Trening: ${w.title}")
+                    Text("Data zostanie ustawiona na dzisiejszą.")
+                    Spacer(Modifier.height(8.dp))
+                    Text("Po zatwierdzeniu trening będzie miał status „Wykonany”.")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !markingDone,
+                    onClick = {
+                        scope.launch {
+                            markWorkoutDone(w.id)
+                            markDoneDialogFor = null
+                        }
+                    }
+                ) {
+                    if (markingDone) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text("Tak")
+                }
+            },
+            dismissButton = {
+                TextButton(enabled = !markingDone, onClick = { markDoneDialogFor = null }) {
+                    Text("Nie")
+                }
+            }
+        )
     }
 }

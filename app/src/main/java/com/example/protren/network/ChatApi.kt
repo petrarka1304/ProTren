@@ -3,7 +3,6 @@ package com.example.protren.network
 import retrofit2.Response
 import retrofit2.http.*
 
-//DTO: listy czatów
 data class ChatSummaryDto(
     val id: String,
     val otherUserId: String?,
@@ -22,7 +21,6 @@ data class StartChatRequest(
     val userId: String
 )
 
-//DTO: załączniki
 data class ChatAttachmentDto(
     val type: String,
     val url: String,
@@ -39,7 +37,6 @@ data class ReplyRef(
     val text: String? = null
 )
 
-//DTO: wiadomości
 data class ChatMessageDto(
     val id: String,
     val chatId: String,
@@ -53,7 +50,6 @@ data class ChatMessageDto(
     val replyTo: ReplyRef? = null
 )
 
-//DTO: requesty
 data class SendMessageRequest(
     val text: String,
     val replyToId: String? = null
@@ -69,7 +65,6 @@ data class MarkReadRequest(
     val lastReadMessageId: String? = null
 )
 
-//API
 interface ChatApi {
 
 

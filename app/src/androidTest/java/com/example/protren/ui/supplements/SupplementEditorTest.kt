@@ -21,10 +21,7 @@ class SupplementEditorTest {
             )
         }
 
-        // Klikamy Zapisz bez wpisywania niczego
         composeTestRule.onNodeWithText("Zapisz").performClick()
-
-        // Sprawdzamy czy wyskoczył błąd walidacji
         composeTestRule.onNodeWithText("Podaj nazwę suplementu").assertIsDisplayed()
     }
 
@@ -35,19 +32,12 @@ class SupplementEditorTest {
             SupplementEditorScreen(navController = navController, supplementId = null)
         }
 
-        // 1. Znajdujemy pole po etykiecie i wpisujemy tekst
-        // Używamy onNodeWithText dla etykiety, bo to zazwyczaj działa najlepiej do 'kliknięcia' w pole
         composeTestRule.onNodeWithText("Nazwa suplementu").performTextInput("Witamina C")
         composeTestRule.onNodeWithText("Dawkowanie (np. 2000 IU, 1 kaps.)").performTextInput("1000mg")
 
-        // 2. Weryfikujemy czy tekst się wpisał
-        // POPRAWKA: Szukamy tekstu "Witamina C", ALE tylko w elemencie edytowalnym (hasSetTextAction).
-        // To ignoruje tekst "Witamina C" widoczny na liście podpowiedzi (który powodował błąd).
         composeTestRule.onNode(
             hasText("Witamina C") and hasSetTextAction()
         ).assertIsDisplayed()
-
-        // To samo dla dawkowania
         composeTestRule.onNode(
             hasText("1000mg") and hasSetTextAction()
         ).assertIsDisplayed()

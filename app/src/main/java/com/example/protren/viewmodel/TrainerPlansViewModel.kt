@@ -152,16 +152,19 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
 
-                val dayDtos = plan.days.map { day ->
+                val dayDtos: List<TrainingPlanDayCreateDto> = plan.days.map { day ->
                     TrainingPlanDayCreateDto(
-                        title = day.title,
+                        title = day.title.trim().ifBlank { "Dzień" },
                         exercises = day.exercises.mapIndexed { idx, ex ->
+                            val safeName = (ex.name ?: "Ćwiczenie ${idx + 1}").trim().ifBlank { "Ćwiczenie ${idx + 1}" }
+                            val safeSets = (ex.sets ?: 3).coerceAtLeast(1)
+                            val safeReps = ((ex.repsMax ?: ex.repsMin) ?: 10).coerceAtLeast(1)
                             ExerciseRequest(
-                                name = ex.name ?: "Ćwiczenie ${idx + 1}",
+                                name = safeName,
                                 muscleGroup = "Ogólne",
-                                sets = 3,
-                                repsMin = 10,
-                                repsMax = 12,
+                                sets = safeSets,
+                                repsMin = safeReps,
+                                repsMax = safeReps,
                                 rir = 2,
                                 pattern = "straight"
                             )
@@ -170,10 +173,11 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 val body = TrainerCreatePlanRequest(
-                    name = plan.name,
+                    name = plan.name.trim(),
                     days = dayDtos,
                     isPublic = false
                 )
+
 
                 val res = trainerApi().createPlanForUser(clientId, body)
                 if (res.isSuccessful) {

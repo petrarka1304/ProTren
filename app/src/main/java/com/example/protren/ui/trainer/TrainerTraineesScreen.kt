@@ -42,6 +42,7 @@ import com.example.protren.network.ApiClient
 import com.example.protren.network.ChatApi
 import com.example.protren.network.StartChatRequest
 import com.example.protren.network.TrainerCreatePlanRequest
+import com.example.protren.network.TrainingPlanDayCreateDto
 import com.example.protren.network.TrainingPlanDayDto
 import com.example.protren.viewmodel.TrainerPanelViewModel
 import kotlinx.coroutines.launch
@@ -228,16 +229,18 @@ fun TrainerTraineesScreen(nav: NavController) {
                                 onDismiss = { open = false },
                                 onCreate = { planName, dayTitle ->
                                     open = false
+
                                     vm.createPlanFor(
                                         userId = t.userId,
                                         req = TrainerCreatePlanRequest(
                                             name = planName.trim(),
                                             days = listOf(
-                                                TrainingPlanDayDto(
-                                                    title = dayTitle,
+                                                TrainingPlanDayCreateDto(
+                                                    title = dayTitle.trim().ifBlank { "Dzień" },
                                                     exercises = emptyList()
                                                 )
-                                            )
+                                            ),
+                                            isPublic = false
                                         )
                                     ) { _, msg ->
                                         scope.launch { snackbar.showSnackbar(msg) }
@@ -245,6 +248,7 @@ fun TrainerTraineesScreen(nav: NavController) {
                                 }
                             )
                         }
+
                     }
                     item { Spacer(Modifier.height(4.dp)) }
                 }
@@ -398,11 +402,6 @@ private fun TraineeCard(
                     Text("Suplementy")
                 }
 
-                FilledTonalButton(onClick = onCreatePlan, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Ułóż plan")
-                }
             }
 
             Row(

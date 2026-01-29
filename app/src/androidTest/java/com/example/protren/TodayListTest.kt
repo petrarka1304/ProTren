@@ -3,7 +3,7 @@ package com.example.protren
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.example.protren.model.Supplement
-import com.example.protren.ui.supplements.TodayList // Musisz zmienić TodayList na public, żeby test widział
+import com.example.protren.ui.supplements.TodayList
 import org.junit.Rule
 import org.junit.Test
 
@@ -25,8 +25,6 @@ class TodayListTest {
 
         // WHEN
         composeTestRule.setContent {
-            // Uwaga: Jeśli TodayList jest 'private' w Twoim pliku,
-            // musisz usunąć słowo 'private' w kodzie SupplementsScreen.kt
             TodayList(
                 items = listOf(testItem),
                 onToggle = { _, _ -> },
@@ -34,11 +32,9 @@ class TodayListTest {
             )
         }
 
-        // THEN
         composeTestRule.onNodeWithText("Witamina C").assertIsDisplayed()
         composeTestRule.onNodeWithText("1000mg", substring = true).assertIsDisplayed()
         composeTestRule.onNodeWithText("Rano", substring = true).assertIsDisplayed()
-        // Przycisk "Do wzięcia" powinien być widoczny
         composeTestRule.onNodeWithText("Do wzięcia").assertIsDisplayed()
     }
 
@@ -64,10 +60,7 @@ class TodayListTest {
             )
         }
 
-        // Kliknij przycisk "Do wzięcia"
         composeTestRule.onNodeWithText("Do wzięcia").performClick()
-
-        // Sprawdź czy callback zadziałał
         assert(clickedId == "55")
         assert(clickedStatus == true)
     }
@@ -77,7 +70,7 @@ class TodayListTest {
         val testItem = Supplement(
             _id = "2",
             name = "Omega-3",
-            takenToday = true // Wzięte
+            takenToday = true
         )
 
         composeTestRule.setContent {
@@ -88,7 +81,6 @@ class TodayListTest {
             )
         }
 
-        // Powinien widzieć przycisk "Wzięte" i ikonę Check
         composeTestRule.onNodeWithText("Wzięte").assertIsDisplayed()
     }
 }

@@ -5,6 +5,7 @@
 )
 
 package com.example.protren.ui.supplements
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -215,18 +217,26 @@ fun TodayList(
             val times = (s.times ?: emptyList())
                 .map { translateTime(it) }
                 .joinToString(", ")
+
+            // Sprawdzamy stan
             val taken = (s.takenToday == true)
 
             ElevatedCard(
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateItem(placementSpec = tween(durationMillis = 180))
+                    .animateItemPlacement(animationSpec = tween(durationMillis = 180))
                     .animateContentSize(animationSpec = tween(durationMillis = 180))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = LocalIndication.current
-                    ) { onEdit(id) }
+                    ) { onEdit(id) },
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = if (taken)
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    else
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                )
 
             ) {
                 Column(
@@ -242,7 +252,8 @@ fun TodayList(
                         Column(Modifier.weight(1f)) {
                             Text(
                                 name,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                ),
                                 fontWeight = FontWeight.SemiBold
                             )
                             val sub = listOfNotNull(
@@ -275,21 +286,26 @@ fun TodayList(
                         if (taken) {
                             FilledTonalButton(
                                 onClick = { onToggle(id, false) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             ) {
                                 Icon(Icons.Filled.Check, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
-                                Text("Wzięte")
+                                Text("Wzięte (kliknij by cofnąć)")
                             }
                         } else {
-                            OutlinedButton(
+                            Button(
                                 onClick = { onToggle(id, true) },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Do wzięcia")
+                                Text("Zaznacz jako wzięte")
                             }
                         }
                     }
+
 
                     val notes = s.notes.orEmpty()
                     AnimatedVisibility(visible = notes.isNotBlank()) {

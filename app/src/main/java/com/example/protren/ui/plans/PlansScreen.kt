@@ -257,7 +257,6 @@ private fun TloDlaSwipe(wartosc: SwipeToDismissBoxValue) {
                 }
 
                 UkladTlaSwipe.SRODEK -> {
-                    // brak tekstu
                 }
             }
         }

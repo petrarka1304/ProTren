@@ -4,13 +4,11 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.random.Random
 
-
 enum class PlanType { FULL_BODY, UPPER_LOWER, PUSH_PULL_LEGS, CUSTOM }
 enum class Level { BEGINNER, INTERMEDIATE, ADVANCED }
 enum class Equipment { HOME, GYM, MINIMAL }
 enum class Goal { STRENGTH, HYPERTROPHY, ENDURANCE, FAT_LOSS }
 
-/** reprezentacja ćwiczenia z bazy do generatora */
 data class ExerciseDb(
     val name: String,
     val group: String? = null,
@@ -47,263 +45,158 @@ data class GeneratedPlan(
 
 object AutoWorkoutGenerator {
 
-    /*celowana liczba ćwiczeń na dzień*/
-    private const val MIN_EXERCISES_PER_DAY = 8
-    private const val MAX_ACCESSORIES_PER_DAY = 5
-
-    /*mapowanie sprzętu na słowa kluczowe z bazy */
     private fun equipmentMatches(eq: Equipment, equipmentField: String?): Boolean {
         val e = equipmentField?.lowercase().orEmpty()
         return when (eq) {
-            Equipment.GYM     -> e.contains("siłownia") || e.contains("maszyna") || e.contains("sztanga") || e.contains("drążek")
-            Equipment.HOME    -> e.contains("dom") || e.contains("brak") || e.contains("drążek") || e.contains("hantl")
-            Equipment.MINIMAL -> e.contains("brak") || e.contains("dom") || e.contains("kettlebell") || e.contains("hantl")
+            Equipment.GYM -> true
+            Equipment.HOME -> e.contains("dom") || e.contains("brak") || e.contains("drążek") || e.contains("hantl")
+            Equipment.MINIMAL -> e.contains("dom") || e.contains("kettle") || e.contains("hantl") || e.contains("guma")
         }
     }
 
-    private val patternToGroup = mapOf(
-        "squat" to "nogi",
-        "hinge" to "tył nóg/pośladki",
-        "single_leg" to "nogi",
-        "push" to "klatka/barki/triceps",
-        "pull" to "plecy/biceps",
-        "core" to "core",
-        "conditioning" to "cardio"
-    )
-
-
     private fun weeklySetsBase(goal: Goal, level: Level): Map<String, Int> {
         val base = mutableMapOf(
-            "nogi" to 12, "tył nóg/pośladki" to 12,
-            "klatka/barki/triceps" to 12, "plecy/biceps" to 12,
-            "core" to 6
+            "Nogi" to 14, "Klatka" to 10, "Plecy" to 12,
+            "Barki" to 8, "Biceps" to 6, "Triceps" to 6, "Core" to 6
         )
-        when (goal) {
-            Goal.STRENGTH -> base.replaceAll { _, v -> (v * 0.8).toInt().coerceAtLeast(6) }
-            Goal.ENDURANCE -> base.replaceAll { _, v -> (v * 0.7).toInt().coerceAtLeast(5) }
-            Goal.FAT_LOSS -> {
-                base.replaceAll { _, v -> (v * 0.9).toInt().coerceAtLeast(6) }
-                base["conditioning"] = 3
-            }
-            Goal.HYPERTROPHY -> {  }
+        val levelMult = when(level) {
+            Level.BEGINNER -> 0.7; Level.INTERMEDIATE -> 1.0; Level.ADVANCED -> 1.3
         }
-        when (level) {
-            Level.BEGINNER     -> base.replaceAll { _, v -> max(6, (v * 0.75).toInt()) }
-            Level.INTERMEDIATE -> {}
-            Level.ADVANCED     -> base.replaceAll { _, v -> (v * 1.2).toInt() }
-        }
+        base.replaceAll { _, v -> (v * levelMult).toInt().coerceAtLeast(3) }
         return base
     }
 
     private fun repsAndRir(goal: Goal): Pair<IntRange, Int> = when (goal) {
-        Goal.STRENGTH     -> 4..6  to 2
-        Goal.HYPERTROPHY  -> 6..12 to 1
-        Goal.ENDURANCE    -> 12..20 to 1
-        Goal.FAT_LOSS     -> 8..15  to 1
+        Goal.STRENGTH -> 3..6 to 3
+        Goal.HYPERTROPHY -> 8..12 to 1
+        Goal.ENDURANCE -> 15..20 to 1
+        Goal.FAT_LOSS -> 10..15 to 1
     }
 
-    /*SZABLONY SPLITÓW*/
+    private val patternToGroup = mapOf(
+        "squat" to "Nogi",
+        "hinge" to "Nogi",
+        "single_leg" to "Nogi",
+        "push" to "Klatka",
+        "pull" to "Plecy",
+        "core" to "Core"
+    )
+
     private fun splitTemplate(type: PlanType, days: Int): List<List<String>> {
         val d = days.coerceIn(2, 6)
-
-        fun fbw(): List<List<String>> =
-            List(d) { listOf("squat", "hinge", "push", "pull", "core") }
-
-        fun upperLower(): List<List<String>> {
-            val upper = listOf("push", "pull", "core")
-            val lower = listOf("squat", "hinge", "single_leg", "core")
-            return List(d) { index -> if (index % 2 == 0) upper else lower }
-        }
-
-        fun ppl(): List<List<String>> {
-            val push = listOf("push", "core")
-            val pull = listOf("pull", "core")
-            val legs = listOf("squat", "hinge", "single_leg", "core")
-            return List(d) { index ->
-                when (index % 3) {
-                    0 -> push
-                    1 -> pull
-                    else -> legs
+        return when (type) {
+            PlanType.FULL_BODY -> List(d) { listOf("squat", "push", "pull", "hinge", "core") }
+            PlanType.UPPER_LOWER -> List(d) { i ->
+                if (i % 2 == 0) listOf("push", "pull", "push", "pull", "core")
+                else listOf("squat", "hinge", "single_leg", "core")
+            }
+            PlanType.PUSH_PULL_LEGS -> List(d) { i ->
+                when (i % 3) {
+                    0 -> listOf("push", "push", "core")
+                    1 -> listOf("pull", "pull", "core")
+                    else -> listOf("squat", "hinge", "single_leg", "core")
                 }
             }
-        }
-
-        return when (type) {
-            PlanType.FULL_BODY      -> fbw()
-            PlanType.UPPER_LOWER    -> upperLower()
-            PlanType.PUSH_PULL_LEGS -> ppl()
-            PlanType.CUSTOM         -> fbw()
+            else -> List(d) { listOf("squat", "push", "pull", "core") }
         }
     }
 
-    /*wybór ćwiczenia z katalogu*/
     private fun pickFromCatalog(
         pattern: String,
-        eq: Equipment,
-        catalog: List<ExerciseDb>,
-        rng: Random,
-        disallowNames: Set<String> = emptySet()
-    ): String {
-        val tag = pattern.lowercase()
-
-        fun List<ExerciseDb>.avoidDupes() = this.filter { it.name !in disallowNames }
-
-        val p1 = catalog.filter {
-            tag in it.tags.map(String::lowercase) && equipmentMatches(eq, it.equipment)
-        }.avoidDupes()
-        if (p1.isNotEmpty()) return p1.random(rng).name
-
-        val p2 = catalog.filter { tag in it.tags.map(String::lowercase) }.avoidDupes()
-        if (p2.isNotEmpty()) return p2.random(rng).name
-
-        val heuristics = when (tag) {
-            "squat"       -> listOf("przysiad")
-            "hinge"       -> listOf("martwy", "rdl", "hip thrust", "ciąg")
-            "push"        -> listOf("wycisk", "pompki", "dipy", "barki")
-            "pull"        -> listOf("wiosł", "podciąg", "ściąganie")
-            "single_leg"  -> listOf("wykrok", "bułgarski", "step-up", "split")
-            "core"        -> listOf("plank", "brzuch", "pallof", "allah")
-            "conditioning"-> listOf("rower", "bieżnia", "skakanka", "burpees")
-            else          -> emptyList()
-        }
-        val p3 = catalog.filter { e -> heuristics.any { key -> e.name.lowercase().contains(key) } }.avoidDupes()
-        if (p3.isNotEmpty()) return p3.random(rng).name
-
-        return pattern
-    }
-
-    /*GENERACJA*/
-    fun generate(
         options: GenerationOptions,
         catalog: List<ExerciseDb>,
-        seed: Long? = null
-    ): GeneratedPlan {
-        val rng = seed?.let { Random(it) } ?: Random(System.currentTimeMillis())
-        val template: List<List<String>> = splitTemplate(options.type, options.daysPerWeek)
-        val (repRange, baseRir) = repsAndRir(options.goal)
-        val weeklyBudget = weeklySetsBase(options.goal, options.level).toMutableMap()
+        rng: Random,
+        disallowNames: Set<String>,
+        allowedGroups: List<String>?
+    ): ExerciseDb? {
+        val tag = pattern.lowercase()
 
-        val daysPerGroup = mutableMapOf<String, Int>().withDefault { 0 }
-        template.forEach { dayPatterns ->
-            dayPatterns.forEach { pattern ->
-                val group = patternToGroup[pattern] ?: return@forEach
-                daysPerGroup[group] = (daysPerGroup.getValue(group) + 1)
-            }
+        val candidates = catalog.filter {
+            equipmentMatches(options.equipment, it.equipment) &&
+                    it.name !in disallowNames &&
+                    (tag in it.tags.map(String::lowercase)) &&
+                    (allowedGroups == null || it.group in allowedGroups)
         }
 
-        fun buildWeek(progressFactor: Double, rirDelta: Int): List<DayPlan> {
-            val remaining = weeklyBudget.toMutableMap()
-            val out = mutableListOf<DayPlan>()
+        if (candidates.isEmpty()) return null
 
-            template.forEachIndexed { idx, patterns ->
-                val exList = mutableListOf<ExerciseSpec>()
-                val title = "Dzień ${idx + 1}"
+        return if (options.level == Level.BEGINNER) {
+            val compounds = candidates.filter { "compound" in it.tags }
+            if (compounds.isNotEmpty()) compounds.random(rng) else candidates.random(rng)
+        } else {
+            candidates.random(rng)
+        }
+    }
 
-                patterns.forEach { p ->
-                    val group = patternToGroup[p] ?: return@forEach
-                    val total = weeklyBudget[group] ?: 0
-                    val dcount = daysPerGroup[group] ?: 1
-                    val rawSets = ceil(total.toDouble() / dcount).toInt().coerceAtLeast(2)
-                    val setsToday = minOf(rawSets, (remaining[group] ?: 0)).coerceAtLeast(1)
+    fun generate(options: GenerationOptions, catalog: List<ExerciseDb>, seed: Long? = null): GeneratedPlan {
+        val rng = seed?.let { Random(it) } ?: Random(System.currentTimeMillis())
+        val template = splitTemplate(options.type, options.daysPerWeek)
+        val (repRange, baseRir) = repsAndRir(options.goal)
+        val weeklyBudget = weeklySetsBase(options.goal, options.level)
+        val patternCounts = template.flatten().groupingBy { it }.eachCount()
 
-                    if (setsToday > 0) {
-                        val name = pickFromCatalog(
-                            p,
-                            options.equipment,
-                            catalog,
-                            rng,
-                            exList.map { it.name }.toSet()
-                        )
-                        val reps = IntRange(
-                            (repRange.first * progressFactor).toInt().coerceAtLeast(3),
-                            (repRange.last  * progressFactor).toInt()
-                        )
-                        exList += ExerciseSpec(
-                            name = name,
+        fun buildWeek(progressFactor: Double): List<DayPlan> {
+            return template.mapIndexed { dayIdx, dayPatterns ->
+                val dayExercises = mutableListOf<ExerciseSpec>()
+                val namesInDay = mutableSetOf<String>()
+
+                val isSplit = options.type != PlanType.FULL_BODY
+                val dayIsLower = dayPatterns.any { it in listOf("squat", "hinge", "single_leg") }
+                val dayIsUpper = dayPatterns.any { it in listOf("push", "pull") }
+
+                val allowedGroups = if (!isSplit) null else {
+                    val list = mutableListOf<String>("Core", "Cardio")
+                    if (dayIsLower) list.add("Nogi")
+                    if (dayIsUpper) list.addAll(listOf("Klatka", "Plecy", "Barki", "Biceps", "Triceps"))
+                    list
+                }
+
+                dayPatterns.forEach { p ->
+                    val ex = pickFromCatalog(p, options, catalog, rng, namesInDay, allowedGroups)
+                    if (ex != null) {
+                        val totalSets = weeklyBudget[ex.group] ?: 8
+                        val setsToday = ceil(totalSets.toDouble() / (patternCounts[p] ?: 1)).toInt().coerceIn(2, 4)
+
+                        dayExercises += ExerciseSpec(
+                            name = ex.name,
                             sets = setsToday,
-                            reps = reps,
-                            rir = (baseRir - rirDelta).coerceAtLeast(0),
-                            muscleGroup = group,
+                            reps = IntRange((repRange.first * progressFactor).toInt(), (repRange.last * progressFactor).toInt()),
+                            rir = baseRir,
+                            muscleGroup = ex.group ?: "Inne",
                             pattern = p
                         )
-                        remaining[group] = (remaining[group] ?: 0) - setsToday
+                        namesInDay.add(ex.name)
                     }
                 }
 
-                val orderedMain = exList.sortedBy {
-                    when (it.pattern) {
-                        "squat","hinge" -> 0
-                        "push","pull"   -> 1
-                        "single_leg"    -> 2
-                        "core"          -> 3
-                        else            -> 4
-                    }
-                }.toMutableList()
+                val targetCount = if (options.level == Level.BEGINNER) 6 else 8
+                var safetyValve = 0
+                while (dayExercises.size < targetCount && safetyValve < 15) {
+                    safetyValve++
+                    val randomPattern = dayPatterns.random(rng)
+                    val acc = pickFromCatalog(randomPattern, options, catalog, rng, namesInDay, allowedGroups)
 
-                if (orderedMain.size < MIN_EXERCISES_PER_DAY) {
-                    val accessoriesPriority = buildList {
-                        addAll(patterns)
-                        addAll(listOf("push","pull","single_leg","core","hinge","squat"))
-                    }
-
-                    var added = 0
-                    var tries = 0
-                    val nameBlocklist = orderedMain.map { it.name }.toMutableSet()
-
-                    while (
-                        orderedMain.size < MIN_EXERCISES_PER_DAY &&
-                        added < MAX_ACCESSORIES_PER_DAY &&
-                        tries < 40
-                    ) {
-                        tries++
-                        val pickPattern = accessoriesPriority.random(rng)
-                        val group = patternToGroup[pickPattern] ?: continue
-                        val accName = pickFromCatalog(
-                            pickPattern,
-                            options.equipment,
-                            catalog,
-                            rng,
-                            nameBlocklist
-                        )
-                        if (accName in nameBlocklist) continue
-
-                        val accRir = (baseRir + 1 - rirDelta).coerceAtLeast(0)
-                        val accReps = IntRange(
-                            max(3, (repRange.first * progressFactor).toInt()),
-                            (repRange.last * progressFactor).toInt()
-                        )
-
-                        orderedMain += ExerciseSpec(
-                            name = accName,
+                    if (acc != null) {
+                        dayExercises += ExerciseSpec(
+                            name = acc.name,
                             sets = 2,
-                            reps = accReps,
-                            rir = accRir,
-                            muscleGroup = group,
-                            pattern = pickPattern
+                            reps = IntRange((repRange.first * 1.5).toInt(), (repRange.last * 1.5).toInt()),
+                            rir = baseRir + 1,
+                            muscleGroup = acc.group ?: "Dodatki",
+                            pattern = randomPattern
                         )
-                        nameBlocklist += accName
-                        added++
+                        namesInDay.add(acc.name)
                     }
                 }
 
-                out += DayPlan(title = title, exercises = orderedMain)
+                DayPlan("Dzień ${dayIdx + 1}", dayExercises)
             }
-
-            return out
         }
 
-        val weeks = mutableListOf<List<DayPlan>>()
-        val totalWeeks = options.numberOfWeeks.coerceIn(1, 6)
-
-        // Liniowa progresja: każdy tydzień +5% objętości/zakresu powtórzeń względem poprzedniego
-        (1..totalWeeks).forEach { wk ->
-            val factor = 1.0 + (wk - 1) * 0.05
-            weeks += buildWeek(
-                progressFactor = factor,
-                rirDelta = if (options.goal == Goal.STRENGTH) 1 else 0
-            )
+        val microcycles = (1..options.numberOfWeeks.coerceIn(1, 6)).map { wk ->
+            buildWeek(1.0 + (wk - 1) * 0.05)
         }
 
-        return GeneratedPlan(microcycles = weeks)
+        return GeneratedPlan(microcycles)
     }
 }

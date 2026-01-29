@@ -162,6 +162,7 @@ fun AddWorkoutScreen(navController: NavController) {
         val body = CreateWorkoutRequest(
             date = effectiveDateStr,
             status = status,
+            title = title.trim(), 
             exercises = draft.map {
                 Exercise(
                     name = it.name,

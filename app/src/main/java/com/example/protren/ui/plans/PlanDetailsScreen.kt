@@ -32,6 +32,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,11 +55,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.protren.model.TrainingPlan
 import com.example.protren.model.TrainingPlanDay
+import com.example.protren.network.ApiClient
+import com.example.protren.network.TrainingPlanApi
 import com.example.protren.viewmodel.PlanDetailsViewModel
+import kotlinx.coroutines.Dispatchers
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PlanDetailsScreen(
@@ -64,8 +72,27 @@ fun PlanDetailsScreen(
 ) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
+    val prefs = remember { com.example.protren.data.UserPreferences(ctx) }
+
+    fun deletePlan() {
+        scope.launch {
+            try {
+                val token = withContext(Dispatchers.IO) { prefs.getAccessToken() }.orEmpty()
+                val api = ApiClient.createWithAuth(tokenProvider = { token }).create(TrainingPlanApi::class.java)
+                val response = withContext(Dispatchers.IO) { api.deletePlan(planId) }
+
+                if (response.isSuccessful) {
+                    navController.popBackStack()
+                } else {
+                    snackbar.showSnackbar("Błąd podczas usuwania planu")
+                }
+            } catch (e: Exception) {
+                snackbar.showSnackbar("Błąd sieci: ${e.message}")
+            }
+        }
+    }
     val vm: PlanDetailsViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -76,6 +103,17 @@ fun PlanDetailsScreen(
     val error by vm.error.collectAsState()
 
     LaunchedEffect(planId) { vm.load(planId) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, planId) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.load(planId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         topBar = {
@@ -89,9 +127,6 @@ fun PlanDetailsScreen(
                 actions = {
                     IconButton(onClick = { navController.navigate("planEditor/$planId") }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edytuj plan")
-                    }
-                    IconButton(onClick = { /* TODO: potwierdzenie i usuwanie planu */ }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Usuń plan")
                     }
                 }
             )
@@ -240,7 +275,7 @@ private fun DayCard(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "Dzień $dayNumber • ${day.title}",
+                        text = day.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -259,7 +294,7 @@ private fun DayCard(
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = if (expanded) "Zwiń dzień" else "Rozwiń dzień"
+                        contentDescription = if (expanded) "Zwiń" else "Rozwiń"
                     )
                 }
             }
@@ -269,51 +304,44 @@ private fun DayCard(
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HeaderRow()
-                    Divider()
-
-                    day.exercises.forEach { e ->
-                        val name = e.name ?: ""
-                        val sets = e.sets ?: 0
-                        val reps = e.reps ?: 0
-
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(name, Modifier.weight(1f))
-                            Text("$sets", Modifier.width(56.dp), textAlign = TextAlign.End)
-                            Text("$reps", Modifier.width(56.dp), textAlign = TextAlign.End)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (day.exercises.isEmpty()) {
+                        Text(
+                            "Brak ćwiczeń w tym dniu.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        day.exercises.forEachIndexed { idx, ex ->
+                            Column {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${idx + 1}. ${ex.name}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "${ex.sets ?: 0}×${ex.reps ?: 0}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (idx != day.exercises.lastIndex) Divider(Modifier.padding(top = 8.dp))
+                            }
                         }
                     }
-                }
-            }
 
-            val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Data: $today",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                FilledTonalButton(
-                    onClick = onStartDay,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Rozpocznij dzień")
+                    FilledTonalButton(
+                        onClick = onStartDay,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Rozpocznij trening")
+                    }
                 }
             }
         }
@@ -321,45 +349,23 @@ private fun DayCard(
 }
 
 @Composable
-private fun HeaderRow() {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            "Ćwiczenie",
-            Modifier.weight(1f),
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            "Serie",
-            Modifier.width(56.dp),
-            textAlign = TextAlign.End,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            "Powt.",
-            Modifier.width(56.dp),
-            textAlign = TextAlign.End,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
 private fun EmptyHint() {
     ElevatedCard(shape = RoundedCornerShape(24.dp)) {
         Column(
-            Modifier.padding(20.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "Brak dni w planie",
-                style = MaterialTheme.typography.titleMedium,
+                "Plan nie ma jeszcze dni.",
+                textAlign = TextAlign.Center,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                "Ten plan nie ma jeszcze zdefiniowanych dni. Dodaj je w generatorze albo edytorze planu.",
+                "Wejdź w edycję i dodaj dzień oraz ćwiczenia.",
+                textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

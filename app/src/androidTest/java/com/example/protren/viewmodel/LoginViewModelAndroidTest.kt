@@ -23,7 +23,7 @@ class LoginViewModelAndroidTest {
 
         vm.login("test@test.com", "password")
 
-        delay(1500) // dajemy czas na Retrofit
+        delay(1500)
 
         val state = vm.state.value
 

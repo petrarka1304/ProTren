@@ -30,7 +30,7 @@ class AddWorkoutViewModel(private val prefs: UserPreferences) : ViewModel() {
         viewModelScope.launch {
             try {
                 val retrofit = ApiClient.createWithAuth(
-                    tokenProvider = { runBlocking { prefs.getAccessToken() } }, // getToken jest suspend
+                    tokenProvider = { runBlocking { prefs.getAccessToken() } },
                     onUnauthorized = { onUnauthorized?.invoke() }
                 )
                 val api = retrofit.create(WorkoutApi::class.java)

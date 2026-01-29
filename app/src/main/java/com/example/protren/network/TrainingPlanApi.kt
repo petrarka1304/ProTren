@@ -1,17 +1,34 @@
 package com.example.protren.network
 
+import com.example.protren.model.Exercise
 import com.example.protren.model.TrainingPlan
 import com.example.protren.model.TrainingPlanDay
 import retrofit2.Response
 import retrofit2.http.*
 
+
 data class TrainingPlanDto(
     val _id: String,
     val name: String,
-    val days: List<TrainingPlanDay> = emptyList(),
+    val days: List<TrainingPlanDayDto> = emptyList(),
     val isPublic: Boolean = false,
     val createdAt: String? = null,
     val updatedAt: String? = null
+)
+
+data class TrainingPlanDayDto(
+    val title: String,
+    val exercises: List<PlanExerciseDto> = emptyList()
+)
+
+data class PlanExerciseDto(
+    val name: String? = null,
+    val sets: Int? = null,
+    val repsMin: Int? = null,
+    val repsMax: Int? = null,
+    val rir: Int? = null,
+    val pattern: String? = null,
+    val muscleGroup: String? = null
 )
 
 data class ExerciseRequest(
@@ -21,19 +38,15 @@ data class ExerciseRequest(
     val repsMin: Int,
     val repsMax: Int,
     val rir: Int,
-    val pattern: String = ""
+    val pattern: String
 )
+
 
 data class TrainingPlanDayCreateDto(
     val title: String,
     val exercises: List<ExerciseRequest> = emptyList()
 )
 
-@Deprecated(
-    message = "Użyj TrainingPlanDayCreateDto",
-    replaceWith = ReplaceWith("TrainingPlanDayCreateDto")
-)
-typealias TrainingPlanDayDto = TrainingPlanDayCreateDto
 
 data class TrainingPlanCreateRequest(
     val name: String,
@@ -83,7 +96,20 @@ fun TrainingPlanDto.toModel(): TrainingPlan =
     TrainingPlan(
         id = _id,
         name = name,
-        days = days,
+        days = days.map { d ->
+            TrainingPlanDay(
+                title = d.title,
+                exercises = d.exercises.map { e ->
+                    Exercise(
+                        name = e.name,
+                        sets = e.sets,
+                        reps = (e.repsMax ?: e.repsMin) ?: 0,
+                        weight = null,
+                        notes = null
+                    )
+                }
+            )
+        },
         isPublic = isPublic,
         createdAt = createdAt,
         updatedAt = updatedAt

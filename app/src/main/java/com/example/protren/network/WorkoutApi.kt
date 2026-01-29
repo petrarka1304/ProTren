@@ -24,8 +24,10 @@ data class UserData(val email: String = "")
 
 data class UpdateWorkoutRequest(
     val date: String? = null,
+    val title: String?,
     val exercises: List<Exercise> = emptyList(),
-    val trainingPlanId: String? = null
+    val trainingPlanId: String? = null,
+    val status: String? = null
 )
 
 interface WorkoutApi {

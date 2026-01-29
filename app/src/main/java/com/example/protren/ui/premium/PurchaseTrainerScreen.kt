@@ -250,7 +250,6 @@ fun PurchaseTrainerScreen(
                 }
 
                 else -> {
-                    // nic
                 }
             }
         }

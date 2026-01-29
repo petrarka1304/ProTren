@@ -69,7 +69,7 @@ class TrainerPlansViewModel(
     ) {
         val traineeId = _ui.value.traineeId ?: return
         val editing = _ui.value.editorInitial
-
+        android.util.Log.d("TRAINER_DEBUG", "Próba zapisu. Editing ID: ${editing?._id}")
         val payload: Map<String, Any?> = mapOf(
             "name" to name.trim(),
             "dosage" to (dosage?.trim().orEmpty()),

@@ -5,24 +5,21 @@
 
 package com.example.protren.ui.plans
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,10 +27,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.protren.data.UserPreferences
 import com.example.protren.network.*
+import com.example.protren.ui.exercises.EXERCISE_PICKER_PRESELECTED_IDS
+import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_IDS
+import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 
 private const val MAX_PLAN_NAME = 60
 private const val MAX_DAY_TITLE = 40
@@ -43,6 +42,8 @@ private const val MIN_SETS = 1
 private const val MAX_SETS = 99
 private const val MIN_REPS = 1
 private const val MAX_REPS = 999
+
+private const val PENDING_ADD_DAY_INDEX = "pending_add_day_index"
 
 private fun clampInt(value: Int, min: Int, max: Int): Int = when {
     value < min -> min
@@ -56,23 +57,17 @@ private fun String.onlyDigits(maxLen: Int): String =
 private fun String.sanitizeText(maxLen: Int): String =
     this.trim().replace(Regex("\\s+"), " ").take(maxLen)
 
-
 private data class ExerciseUi(
-    val name: String,
+    val id: String? = null,
+    val name: String = "Ćwiczenie",
     val sets: Int = 3,
     val reps: Int = 10
 )
 
 private data class DayUi(
     val title: String,
-    val exercises: MutableList<ExerciseUi> = mutableListOf()
+    val exercises: SnapshotStateList<ExerciseUi> = mutableStateListOf()
 )
-
-
-private const val EX_RESULT_IDS = "EXERCISE_PICKER_RESULT_IDS"
-private const val EX_RESULT_NAMES = "EXERCISE_PICKER_RESULT_NAMES"
-
-// ────────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun PlanEditorScreen(
@@ -81,6 +76,8 @@ fun PlanEditorScreen(
 ) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
+    val prefs = remember { UserPreferences(ctx) }
 
     var loading by remember { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
@@ -90,30 +87,51 @@ fun PlanEditorScreen(
     var isPublic by remember { mutableStateOf(false) }
     val days = remember { mutableStateListOf<DayUi>() }
 
-    var pendingAddForDayIndex by remember { mutableStateOf<Int?>(null) }
+    val planHandle = remember(planId) {
+        requireNotNull(navController.currentBackStackEntry?.savedStateHandle) {
+            "Brak currentBackStackEntry dla PlanEditorScreen"
+        }
+    }
+
+    var pendingDayIdxLocal by rememberSaveable { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(planId) {
         loading = true
         try {
-            val token = withContext(Dispatchers.IO) { UserPreferences(navController.context).getAccessToken() }.orEmpty()
+            val token = withContext(Dispatchers.IO) { prefs.getAccessToken() }.orEmpty()
             val api = ApiClient.createWithAuth(tokenProvider = { token }).create(TrainingPlanApi::class.java)
             val res = withContext(Dispatchers.IO) { api.getPlan(planId) }
+
             if (res.isSuccessful) {
                 val dto = res.body()
                 name = dto?.name.orEmpty().sanitizeText(MAX_PLAN_NAME)
                 isPublic = dto?.isPublic ?: false
+
                 days.clear()
                 dto?.days.orEmpty().forEach { d ->
+                    val exState = mutableStateListOf<ExerciseUi>()
+                    d.exercises.forEach { ex ->
+                        val repsValue = when {
+                            (ex as? PlanExerciseDto)?.repsMax != null -> (ex as PlanExerciseDto).repsMax
+                            (ex as? PlanExerciseDto)?.repsMin != null -> (ex as PlanExerciseDto).repsMin
+                            else -> null
+                        } ?: 10
+
+                        exState.add(
+                            ExerciseUi(
+                                name = (ex.name ?: "Ćwiczenie")
+                                    .sanitizeText(MAX_EXERCISE_NAME)
+                                    .ifBlank { "Ćwiczenie" },
+                                sets = clampInt(ex.sets ?: 3, MIN_SETS, MAX_SETS),
+                                reps = clampInt(repsValue, MIN_REPS, MAX_REPS)
+                            )
+                        )
+                    }
+
                     days.add(
                         DayUi(
                             title = (d.title ?: "").sanitizeText(MAX_DAY_TITLE).ifBlank { "Dzień" },
-                            exercises = d.exercises.map {
-                                ExerciseUi(
-                                    name = (it.name ?: "Ćwiczenie").sanitizeText(MAX_EXERCISE_NAME).ifBlank { "Ćwiczenie" },
-                                    sets = clampInt(it.sets ?: 3, MIN_SETS, MAX_SETS),
-                                    reps = clampInt(it.reps ?: 10, MIN_REPS, MAX_REPS)
-                                )
-                            }.toMutableList()
+                            exercises = exState
                         )
                     )
                 }
@@ -127,31 +145,55 @@ fun PlanEditorScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        handle.getStateFlow<ArrayList<String>?>(EX_RESULT_IDS, null).collect { ids ->
-            if (ids.isNullOrEmpty()) return@collect
-            val names = handle.get<ArrayList<String>>(EX_RESULT_NAMES)
-            val dayIdx = pendingAddForDayIndex
-            if (dayIdx != null && dayIdx in days.indices) {
-                ids.forEachIndexed { idx, _ ->
-                    val rawName = names?.getOrNull(idx) ?: "Ćwiczenie"
-                    val exName = rawName.sanitizeText(MAX_EXERCISE_NAME).ifBlank { "Ćwiczenie" }
-                    days[dayIdx].exercises.add(ExerciseUi(name = exName))
-                }
-            }
-            pendingAddForDayIndex = null
-            handle[EX_RESULT_IDS] = null
-            handle[EX_RESULT_NAMES] = null
+    LaunchedEffect(loading, days.size, planHandle) {
+        if (loading) return@LaunchedEffect
+
+        val picked = planHandle.get<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
+        if (picked.isNullOrEmpty()) return@LaunchedEffect
+
+        val dayIdx = planHandle.get<Int>(PENDING_ADD_DAY_INDEX) ?: pendingDayIdxLocal
+        if (dayIdx == null) {
+            snackbar.showSnackbar("Nie udało się dodać ćwiczeń: brak wybranego dnia.")
+            planHandle[EXERCISE_PICKER_RESULT_NAMES] = null
+            planHandle[EXERCISE_PICKER_RESULT_IDS] = null
+            return@LaunchedEffect
         }
+
+        if (dayIdx !in days.indices) {
+            snackbar.showSnackbar("Nie udało się dodać ćwiczeń: dzień nie istnieje (odśwież plan).")
+            // tu już czyścimy, bo to realny błąd indeksu
+            planHandle[EXERCISE_PICKER_RESULT_NAMES] = null
+            planHandle[EXERCISE_PICKER_RESULT_IDS] = null
+            planHandle[PENDING_ADD_DAY_INDEX] = null
+            pendingDayIdxLocal = null
+            return@LaunchedEffect
+        }
+
+        picked.forEach { raw ->
+            val safeName = raw.sanitizeText(MAX_EXERCISE_NAME).ifBlank { "Ćwiczenie" }
+            days[dayIdx].exercises.add(ExerciseUi(name = safeName))
+        }
+
+        planHandle[PENDING_ADD_DAY_INDEX] = null
+        pendingDayIdxLocal = null
+        planHandle[EXERCISE_PICKER_RESULT_NAMES] = null
+        planHandle[EXERCISE_PICKER_RESULT_IDS] = null
     }
+
 
     fun savePlan() {
         if (saving) return
         saving = true
+
+        scope.launch {
+            snackbar.showSnackbar("Zapisywanie…", duration = SnackbarDuration.Short)
+        }
+
         scope.launch {
             try {
-                val token = withContext(Dispatchers.IO) { UserPreferences(navController.context).getAccessToken() }.orEmpty()
+                Log.d("PlanEditor", "savePlan() clicked")
+
+                val token = withContext(Dispatchers.IO) { prefs.getAccessToken() }.orEmpty()
                 val api = ApiClient.createWithAuth(tokenProvider = { token }).create(TrainingPlanApi::class.java)
 
                 val safeName = name.sanitizeText(MAX_PLAN_NAME)
@@ -168,8 +210,11 @@ fun PlanEditorScreen(
                             sets = safeSets,
                             repsMin = safeReps,
                             repsMax = safeReps,
-                            rir = 1
+                            rir = 1,
+
+                            pattern = "reps"
                         )
+
                     }
 
                     TrainingPlanDayCreateDto(
@@ -202,7 +247,7 @@ fun PlanEditorScreen(
     fun deletePlan() {
         scope.launch {
             try {
-                val token = withContext(Dispatchers.IO) { UserPreferences(navController.context).getAccessToken() }.orEmpty()
+                val token = withContext(Dispatchers.IO) { prefs.getAccessToken() }.orEmpty()
                 val api = ApiClient.createWithAuth(tokenProvider = { token }).create(TrainingPlanApi::class.java)
                 val res = withContext(Dispatchers.IO) { api.deletePlan(planId) }
                 if (res.isSuccessful) {
@@ -229,10 +274,18 @@ fun PlanEditorScreen(
                 },
                 title = { Text("Edytor planu") },
                 actions = {
+                    if (saving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(end = 12.dp)
+                                .size(22.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
                     IconButton(onClick = { savePlan() }, enabled = !saving) {
                         Icon(Icons.Filled.Save, contentDescription = "Zapisz")
                     }
-                    IconButton(onClick = { confirmDelete = true }) {
+                    IconButton(onClick = { confirmDelete = true }, enabled = !saving) {
                         Icon(Icons.Filled.Delete, contentDescription = "Usuń plan")
                     }
                 }
@@ -241,9 +294,7 @@ fun PlanEditorScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = {
-                    days.add(DayUi(title = "Dzień ${days.size + 1}"))
-                },
+                onClick = { days.add(DayUi(title = "Dzień ${days.size + 1}")) },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text("Dodaj dzień") }
             )
@@ -255,7 +306,10 @@ fun PlanEditorScreen(
             }
         } else {
             LazyColumn(
-                Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
@@ -275,7 +329,6 @@ fun PlanEditorScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            AssistChip(onClick = {}, enabled = false, label = { Text("Dni: ${days.size}") })
                         }
                     }
                 }
@@ -305,7 +358,13 @@ fun PlanEditorScreen(
                         },
                         onDeleteDay = { days.removeAt(index) },
                         onAddExercises = {
-                            pendingAddForDayIndex = index
+                            pendingDayIdxLocal = index
+                            planHandle[PENDING_ADD_DAY_INDEX] = index
+                            planHandle[EXERCISE_PICKER_RESULT_NAMES] = null
+                            planHandle[EXERCISE_PICKER_RESULT_IDS] = null
+                            planHandle[EXERCISE_PICKER_PRESELECTED_IDS] = arrayListOf<String>().apply {
+                                addAll(days[index].exercises.mapNotNull { it.id }.distinct())
+                            }
                             navController.navigate("exercisePicker")
                         },
                         onDeleteExercise = { exIdx ->
@@ -339,7 +398,6 @@ fun PlanEditorScreen(
     }
 }
 
-
 @Composable
 private fun DayEditorCard(
     dayIndex: Int,
@@ -358,11 +416,9 @@ private fun DayEditorCard(
     ElevatedCard(shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-            // Nagłówek + akcje
             Row(
                 Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
                     value = editTitle,
@@ -389,10 +445,7 @@ private fun DayEditorCard(
             }
 
             if (day.exercises.isEmpty()) {
-                Text(
-                    "Brak ćwiczeń — dodaj pierwsze.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Brak ćwiczeń — dodaj pierwsze.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 day.exercises.forEachIndexed { exIndex, ex ->
                     ExerciseRow(
@@ -404,17 +457,14 @@ private fun DayEditorCard(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = onAddExercises) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Dodaj ćwiczenia")
-                }
+            FilledTonalButton(onClick = onAddExercises) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Dodaj ćwiczenia")
             }
         }
     }
 }
-
 
 @Composable
 private fun ExerciseRow(
@@ -449,29 +499,23 @@ private fun ExerciseRow(
 
         AlertDialog(
             onDismissRequest = { showEdit = false },
-            title = { Text("Ustawienia serii/powtórzeń") },
+            title = { Text("Serie i powtórzenia") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = setsTxt,
-                        onValueChange = { setsTxt = it.onlyDigits(2) }, // 1..99
+                        onValueChange = { setsTxt = it.onlyDigits(2) },
                         label = { Text("Serie ($MIN_SETS–$MAX_SETS)") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = repsTxt,
-                        onValueChange = { repsTxt = it.onlyDigits(3) }, // 1..999
+                        onValueChange = { repsTxt = it.onlyDigits(3) },
                         label = { Text("Powtórzenia ($MIN_REPS–$MAX_REPS)") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

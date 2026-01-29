@@ -29,7 +29,6 @@ fun MainScreen(modifier: Modifier = Modifier) {
     val navController: NavHostController = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
 
-    // VM roli (pobiera z JWT + /users/me)
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as Application
     val roleVm: RoleViewModel = viewModel(factory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

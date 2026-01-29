@@ -279,7 +279,6 @@ private fun ChartCard(points: List<DayPoint>, height: Dp, metric: Metric) {
 private fun NiceTrendLineChart(points: List<DayPoint>, height: Dp) {
     val anim by animateFloatAsState(1f, label = "trendIntro")
 
-    // Kolory i pędzle — TYLKO TU (composable), nie w Canvas
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val lineColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surface

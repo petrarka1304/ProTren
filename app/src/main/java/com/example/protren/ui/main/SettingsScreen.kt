@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.protren.data.UserPreferences
+import com.example.protren.navigation.NavItem
 import com.example.protren.network.ApiClient
 import com.example.protren.network.TrainerApi
 import com.example.protren.network.TrainerSettingsRequest
@@ -74,13 +75,20 @@ fun SettingsScreen(
                     firstName = it.firstName.orEmpty()
                     lastName = it.lastName.orEmpty()
                     email = it.email.orEmpty()
-
                     isTrainer = it.role?.equals("trainer", ignoreCase = true) == true
                 }
                 s.msg?.let { snack.showSnackbar(it) }
             }
             is AccountUIState.Deleted -> {
-                snack.showSnackbar(s.msg ?: "Konto zostało usunięte.")
+                scope.launch {
+                    snack.showSnackbar(s.msg ?: "Konto zostało usunięte.")
+                }
+                navController.navigate(NavItem.Login) {
+                    popUpTo(navController.graph.startDestinationId) {
+                        inclusive = true
+                    }
+                    launchSingleTop = true
+                }
             }
             is AccountUIState.Error -> {
                 snack.showSnackbar(s.message)
@@ -115,7 +123,6 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
 
-            // ─── Dane podstawowe ───
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Dane podstawowe", fontWeight = FontWeight.SemiBold)
 

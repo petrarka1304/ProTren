@@ -27,6 +27,7 @@ class PlanDetailsViewModel(private val appContext: Context) : ViewModel() {
     fun load(id: String) {
         viewModelScope.launch {
             try {
+                _error.value = null
                 val token = UserPreferences(appContext).getAccessToken().orEmpty()
                 val api = ApiClient.createWithAuth(tokenProvider = { token }).create(TrainingPlanApi::class.java)
                 val res = api.getPlan(id)
@@ -53,9 +54,12 @@ class PlanDetailsViewModel(private val appContext: Context) : ViewModel() {
                 val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
                 val req = CreateWorkoutRequest(
                     date = today,
+                    status = "planned",
+                    title = "${plan.name} • ${day.title}",
                     exercises = day.exercises,
                     trainingPlanId = plan.id
                 )
+
 
                 val res = api.createWorkout(req)
                 if (res.isSuccessful) {

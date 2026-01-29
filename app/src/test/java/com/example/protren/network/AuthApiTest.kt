@@ -24,7 +24,6 @@ class AuthApiTest {
         mockWebServer = MockWebServer()
         mockWebServer.start()
 
-        // Tworzymy API podłączone do naszego fałszywego serwera
         val retrofit = Retrofit.Builder()
             .baseUrl(mockWebServer.url("/"))
             .addConverterFactory(GsonConverterFactory.create())
@@ -40,7 +39,6 @@ class AuthApiTest {
 
     @Test
     fun `login - powinien wysłać poprawne żądanie POST i sparsować odpowiedź`() = runTest {
-        // GIVEN - Symulujemy odpowiedź backendu
         val jsonResponse = """
             {
                 "token": "old-token",
@@ -56,15 +54,10 @@ class AuthApiTest {
 
         mockWebServer.enqueue(MockResponse().setBody(jsonResponse).setResponseCode(200))
 
-        // WHEN - Wołamy API bezpośrednio
         val request = LoginRequest("test@test.pl", "Haslo123")
         val response = api.login(request)
-
-        // THEN - Weryfikacja
         assertTrue(response.isSuccessful)
         assertEquals("new-access-token", response.body()?.accessToken)
-
-        // Sprawdzamy, czy Retrofit wysłał dobre zapytanie
         val recordedRequest = mockWebServer.takeRequest()
         assertEquals("POST", recordedRequest.method)
         assertEquals("/api/auth/login", recordedRequest.path)
@@ -72,19 +65,15 @@ class AuthApiTest {
 
     @Test
     fun `register - powinien wysłać dane rejestracji`() = runTest {
-        // GIVEN
         mockWebServer.enqueue(MockResponse().setResponseCode(201))
 
-        // WHEN
         val request = RegisterRequest("nowy@test.pl", "Haslo123")
         val response = api.register(request)
 
-        // THEN
         assertTrue(response.isSuccessful)
 
         val recordedRequest = mockWebServer.takeRequest()
         assertEquals("/api/auth/register", recordedRequest.path)
-        // Sprawdzamy czy body zawiera email
         assertTrue(recordedRequest.body.readUtf8().contains("nowy@test.pl"))
     }
 }

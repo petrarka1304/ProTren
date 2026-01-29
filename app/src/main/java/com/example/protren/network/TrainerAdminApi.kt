@@ -27,9 +27,10 @@ data class TraineeItem(
 
 data class TrainerCreatePlanRequest(
     val name: String,
-    val days: List<TrainingPlanDayDto>,
-    val isPublic: Boolean = false
+    val days: List<TrainingPlanDayCreateDto>,
+    val isPublic: Boolean
 )
+
 
 interface TrainerAdminApi {
     @GET("api/coaching/requests")

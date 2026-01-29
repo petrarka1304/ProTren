@@ -22,7 +22,6 @@ class UserPreferences(context: Context) {
         private const val KEY_ROLE = "user_role"
         private const val KEY_NAME = "user_name"
 
-        // śledzone ćwiczenia
         private const val KEY_TRACKED_EXERCISES = "tracked_exercises"
     }
 
@@ -66,7 +65,6 @@ class UserPreferences(context: Context) {
             .apply()
     }
 
-    /**Pełne czyszczenie*/
     fun clearAll() {
         prefs.edit()
             .remove(KEY_TOKEN)
@@ -99,7 +97,6 @@ class UserPreferences(context: Context) {
             true
         }
     }
-    /*DANE PROFILU */
 
     fun saveEmail(email: String?) {
         prefs.edit().putString(KEY_EMAIL, email ?: "").apply()
@@ -125,8 +122,6 @@ class UserPreferences(context: Context) {
 
     fun getUserId(): String? = prefs.getString(KEY_USER_ID, null)
 
-    /*ŚLEDZONE ĆWICZENIA*/
-
     fun saveTrackedExercises(names: List<String>) {
         val clean = names
             .map { it.trim() }
@@ -146,8 +141,6 @@ class UserPreferences(context: Context) {
     fun clearTrackedExercises() {
         prefs.edit().remove(KEY_TRACKED_EXERCISES).apply()
     }
-
-    /*ZGODNOŚĆ WSTECZNA*/
 
     @Deprecated("Użyj getAccessToken()", ReplaceWith("getAccessToken()"))
     fun getToken(): String? = getAccessToken()

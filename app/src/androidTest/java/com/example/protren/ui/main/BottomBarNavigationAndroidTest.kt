@@ -57,8 +57,6 @@ class BottomBarNavigationAndroidTest {
     @Test
     fun bottomBar_navigates_to_profile() {
         rule.setContent { TestAppWithBottomBar() }
-
-        // klikamy w element BottomBar po tekście + akcji kliknięcia (stabilniej niż samo onNodeWithText)
         rule.onNode(hasText("Profil") and hasClickAction()).performClick()
 
         rule.onNodeWithText("SCREEN_PROFILE").assertIsDisplayed()

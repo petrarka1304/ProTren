@@ -16,11 +16,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
+import com.example.protren.data.UserPreferences
+import com.example.protren.model.Exercise
+import com.example.protren.model.WorkoutLog
+import com.example.protren.network.ApiClient
+import com.example.protren.network.WorkoutApi
+import com.example.protren.ui.exercises.EXERCISE_PICKER_PRESELECTED_IDS
+import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_IDS
+import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,15 +41,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
-import com.example.protren.network.ApiClient
-import com.example.protren.network.WorkoutApi
+import androidx.compose.ui.text.TextRange
 import com.example.protren.network.UpdateWorkoutRequest
-import com.example.protren.model.WorkoutLog
-import com.example.protren.model.Exercise
-import com.example.protren.model.CreateWorkoutRequest
-import com.example.protren.data.UserPreferences
-import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_IDS
-import com.example.protren.ui.exercises.EXERCISE_PICKER_RESULT_NAMES
 
 @Composable
 fun EditWorkoutScreen(
@@ -46,10 +51,9 @@ fun EditWorkoutScreen(
 ) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     val prefs = remember { UserPreferences(ctx) }
-
+    var title by remember { mutableStateOf("") }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US) }
     var date by remember { mutableStateOf("") }
     val showDatePicker = remember { mutableStateOf(false) }
@@ -64,64 +68,26 @@ fun EditWorkoutScreen(
     val MAX_REPS_CHARS = 3
     val MAX_WEIGHT_CHARS = 4
 
-    fun digitsOnlyLimited(input: TextFieldValue, maxChars: Int): TextFieldValue {
-        val filtered = input.text.filter { it.isDigit() }.take(maxChars)
-        val newCursor = filtered.length.coerceAtMost(input.selection.end)
-        return TextFieldValue(filtered, selection = androidx.compose.ui.text.TextRange(newCursor))
-    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, navController) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val handle = navController.currentBackStackEntry?.savedStateHandle
+                val ids = handle?.get<ArrayList<String>>(EXERCISE_PICKER_RESULT_IDS)
+                val names = handle?.get<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
 
-    fun computeVolumePreview(): String {
-        val totalSets = draft.sumOf { it.sets }
-        val totalVolume = draft.sumOf { it.sets * it.reps * it.weight }
-        return "Objętość: $totalVolume kg • serie: $totalSets"
-    }
-
-    LaunchedEffect(workoutId) {
-        loading = true
-        try {
-            val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: ""
-            val api = ApiClient.createWithAuth(tokenProvider = { token })
-                .create(WorkoutApi::class.java)
-
-            val res = withContext(Dispatchers.IO) { api.getWorkout(workoutId) }
-            if (res.isSuccessful) {
-                val body: WorkoutLog? = res.body()
-                date = (body?.date ?: "").take(10)
-                draft.clear()
-                body?.exercises.orEmpty().forEach { e ->
-                    draft.add(
-                        DraftExerciseUi(
-                            id = UUID.randomUUID().toString(),               // ← lokalne ID tylko do UI
-                            name = e.name ?: "Ćwiczenie",
-                            sets = e.sets ?: 0,
-                            reps = e.reps ?: 0,
-                            weight = e.weight ?: 0
-                        )
-                    )
-                }
-            } else {
-                snackbar.showSnackbar("Błąd pobierania: HTTP ${res.code()}")
-            }
-        } catch (e: Exception) {
-            snackbar.showSnackbar("Błąd sieci: ${e.localizedMessage ?: "nieznany"}")
-        } finally {
-            loading = false
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        val handle = navController.currentBackStackEntry?.savedStateHandle ?: return@LaunchedEffect
-        handle.getStateFlow<ArrayList<String>?>(EXERCISE_PICKER_RESULT_IDS, null)
-            .collect { ids ->
-                val names = handle.get<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
                 if (!ids.isNullOrEmpty()) {
-                    ids.forEachIndexed { idx, idStr ->
-                        val n = names?.getOrNull(idx) ?: "Ćwiczenie"
-                        if (draft.none { it.id == idStr }) {
+                    ids.forEachIndexed { idx, _ ->
+                        val pickedName = names?.getOrNull(idx) ?: ""
+
+                        if (pickedName.isNotBlank() && draft.none { it.name.equals(pickedName, ignoreCase = true) }) {
                             draft.add(
                                 DraftExerciseUi(
-                                    id = idStr,
-                                    name = n
+                                    id = UUID.randomUUID().toString(),
+                                    name = pickedName,
+                                    sets = 3,
+                                    reps = 10,
+                                    weight = 0
                                 )
                             )
                         }
@@ -130,6 +96,56 @@ fun EditWorkoutScreen(
                     handle.remove<ArrayList<String>>(EXERCISE_PICKER_RESULT_NAMES)
                 }
             }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(workoutId) {
+        loading = true
+        try {
+            val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: ""
+            val api = ApiClient.createWithAuth(tokenProvider = { token }).create(WorkoutApi::class.java)
+
+            val res = withContext(Dispatchers.IO) { api.getWorkout(workoutId) }
+            if (res.isSuccessful) {
+                val body = res.body()
+                date = (body?.date ?: "").take(10)
+                title = body?.title ?: ""
+                draft.clear()
+
+                body?.exercises.orEmpty().forEach { e ->
+                    val exerciseName = e.name?.trim() ?: ""
+                    if (exerciseName.isNotBlank()) {
+                        draft.add(
+                            DraftExerciseUi(
+                                id = UUID.randomUUID().toString(),
+                                name = exerciseName,
+                                sets = e.sets ?: 0,
+                                reps = e.reps ?: 0,
+                                weight = e.weight ?: 0
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            snackbar.showSnackbar("Błąd ładowania")
+        } finally {
+            loading = false
+        }
+    }
+
+    fun digitsOnlyLimited(input: TextFieldValue, maxChars: Int): TextFieldValue {
+        val filtered = input.text.filter { it.isDigit() }.take(maxChars)
+        val newCursor = filtered.length.coerceAtMost(input.selection.end)
+        return TextFieldValue(filtered, selection = TextRange(newCursor))
+    }
+
+    fun computeVolumePreview(): String {
+        val totalSets = draft.sumOf { it.sets }
+        val totalVolume = draft.sumOf { it.sets * it.reps * it.weight }
+        return "Objętość: $totalVolume kg • serie: $totalSets"
     }
 
     fun saveEdit() {
@@ -138,69 +154,25 @@ fun EditWorkoutScreen(
         scope.launch {
             try {
                 val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: ""
-                val api = ApiClient.createWithAuth(tokenProvider = { token })
-                    .create(WorkoutApi::class.java)
+                val api = ApiClient.createWithAuth(tokenProvider = { token }).create(WorkoutApi::class.java)
 
                 val body = UpdateWorkoutRequest(
                     date = date.ifBlank { null },
+                    title = title,
                     exercises = draft.map {
-                        Exercise(
-                            name = it.name,
-                            sets = it.sets,
-                            reps = it.reps,
-                            weight = it.weight,
-                            notes = null
-                        )
+                        Exercise(name = it.name, sets = it.sets, reps = it.reps, weight = it.weight, notes = null)
                     },
                     trainingPlanId = null
                 )
 
                 val res = withContext(Dispatchers.IO) { api.updateWorkout(workoutId, body) }
-                if (res.isSuccessful) {
-                    navController.navigateUp()
-                } else {
-                    snackbar.showSnackbar("Błąd zapisu: HTTP ${res.code()}")
+                if (res.isSuccessful) navController.navigateUp()
+                else {
+                    snackbar.showSnackbar("Błąd zapisu")
+                    saving = false
                 }
             } catch (e: Exception) {
-                snackbar.showSnackbar("Błąd sieci: ${e.localizedMessage ?: "nieznany"}")
-            } finally {
-                saving = false
-            }
-        }
-    }
-
-    fun saveAsNew() {
-        if (saving) return
-        saving = true
-        scope.launch {
-            try {
-                val token = withContext(Dispatchers.IO) { prefs.getAccessToken() } ?: ""
-                val api = ApiClient.createWithAuth(tokenProvider = { token })
-                    .create(WorkoutApi::class.java)
-
-                val body = CreateWorkoutRequest(
-                    date = date.ifBlank { null },
-                    exercises = draft.map {
-                        Exercise(
-                            name = it.name,
-                            sets = it.sets,
-                            reps = it.reps,
-                            weight = it.weight,
-                            notes = null
-                        )
-                    },
-                    trainingPlanId = null
-                )
-
-                val res = withContext(Dispatchers.IO) { api.createWorkout(body) }
-                if (res.isSuccessful) {
-                    navController.navigateUp()
-                } else {
-                    snackbar.showSnackbar("Błąd zapisu: HTTP ${res.code()}")
-                }
-            } catch (e: Exception) {
-                snackbar.showSnackbar("Błąd sieci: ${e.localizedMessage ?: "nieznany"}")
-            } finally {
+                snackbar.showSnackbar("Błąd połączenia")
                 saving = false
             }
         }
@@ -211,49 +183,58 @@ fun EditWorkoutScreen(
             TopAppBar(
                 title = { Text("Edytuj trening") },
                 actions = {
-                    Row {
-                        TextButton(onClick = { saveEdit() }, enabled = !saving) { Text("ZAPISZ") }
+                    TextButton(onClick = { saveEdit() }, enabled = !saving) {
+                        Text(if (saving) "ZAPIS..." else "ZAPISZ")
                     }
                 }
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { navController.navigate("exercisePicker") },
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                onClick = {
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        EXERCISE_PICKER_PRESELECTED_IDS,
+                        ArrayList(draft.map { it.name })
+                    )
+                    navController.navigate("exercisePicker")
+                },
+                icon = { Icon(Icons.Filled.Add, null) },
                 text = { Text("Dodaj ćwiczenia") }
             )
         },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
         if (loading) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) { CircularProgressIndicator() }
         } else {
             LazyColumn(
                 Modifier.fillMaxSize().padding(padding).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(bottom = 100.dp)
             ) {
-
                 item {
-                    val interaction = remember { MutableInteractionSource() }
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Nazwa treningu") },
+                        placeholder = { Text("np. Góra, Dół, FBW...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+                item {
                     OutlinedTextField(
                         value = date,
-                        onValueChange = { /* readOnly */ },
+                        onValueChange = { },
                         label = { Text("Data (YYYY-MM-DD)") },
                         readOnly = true,
                         trailingIcon = {
                             IconButton(onClick = { showDatePicker.value = true }) {
-                                Icon(Icons.Filled.CalendarMonth, contentDescription = "Wybierz datę")
+                                Icon(Icons.Filled.CalendarMonth, null)
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(interactionSource = interaction, indication = null) {
-                                showDatePicker.value = true
-                            }
+                        modifier = Modifier.fillMaxWidth().clickable { showDatePicker.value = true }
                     )
                 }
 
@@ -265,15 +246,8 @@ fun EditWorkoutScreen(
                     item {
                         ElevatedCard(shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.padding(16.dp)) {
-                                Text(
-                                    "Brak ćwiczeń",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    "Dodaj ćwiczenia przyciskiem poniżej.",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text("Brak ćwiczeń", fontWeight = FontWeight.Bold)
+                                Text("Dodaj ćwiczenia przyciskiem poniżej.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -282,14 +256,11 @@ fun EditWorkoutScreen(
                         ElevatedCard(shape = RoundedCornerShape(14.dp)) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(ex.name, modifier = Modifier.weight(1f))
-                                    TextButton(onClick = { editingIndex = draft.indexOf(ex) }) { Text("Serie…") }
+                                    Text(ex.name, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                                    TextButton(onClick = { editingIndex = draft.indexOf(ex) }) { Text("Serie") }
                                     TextButton(onClick = { draft.remove(ex) }) { Text("Usuń") }
                                 }
-                                Text(
-                                    "${ex.sets}×${ex.reps} • ${ex.weight} kg",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text("${ex.sets}×${ex.reps} • ${ex.weight} kg", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -319,47 +290,35 @@ fun EditWorkoutScreen(
 
     if (editingIndex != null) {
         val idx = editingIndex!!
-        val ex = draft[idx]
+        val ex = draft.getOrNull(idx) ?: return@EditWorkoutScreen
         var sets by remember(ex) { mutableStateOf(TextFieldValue(ex.sets.toString())) }
         var reps by remember(ex) { mutableStateOf(TextFieldValue(ex.reps.toString())) }
         var weight by remember(ex) { mutableStateOf(TextFieldValue(ex.weight.toString())) }
 
         AlertDialog(
             onDismissRequest = { editingIndex = null },
-            title = { Text("Ustaw serie dla: ${ex.name}") },
+            title = { Text("Edytuj: ${ex.name}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = sets,
-                        onValueChange = { incoming ->
-                            sets = digitsOnlyLimited(incoming, MAX_SETS_CHARS)
-                        },
+                        onValueChange = { sets = digitsOnlyLimited(it, MAX_SETS_CHARS) },
                         label = { Text("Serie") },
-                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        supportingText = { Text("Maks. $MAX_SETS_CHARS cyfry") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = reps,
-                        onValueChange = { incoming ->
-                            reps = digitsOnlyLimited(incoming, MAX_REPS_CHARS)
-                        },
+                        onValueChange = { reps = digitsOnlyLimited(it, MAX_REPS_CHARS) },
                         label = { Text("Powtórzenia") },
-                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        supportingText = { Text("Maks. $MAX_REPS_CHARS cyfry") },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = weight,
-                        onValueChange = { incoming ->
-                            weight = digitsOnlyLimited(incoming, MAX_WEIGHT_CHARS)
-                        },
+                        onValueChange = { weight = digitsOnlyLimited(it, MAX_WEIGHT_CHARS) },
                         label = { Text("Ciężar [kg]") },
-                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        supportingText = { Text("Maks. $MAX_WEIGHT_CHARS cyfry") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -369,7 +328,7 @@ fun EditWorkoutScreen(
                     val s = sets.text.toIntOrNull() ?: ex.sets
                     val r = reps.text.toIntOrNull() ?: ex.reps
                     val w = weight.text.toIntOrNull() ?: ex.weight
-                    draft[idx] = ex.copy(sets = s, reps = r, weight = w)
+                    draft[idx] = ex.copy(sets = s.coerceAtLeast(1), reps = r.coerceAtLeast(1), weight = w.coerceAtLeast(0))
                     editingIndex = null
                 }) { Text("Zapisz") }
             },

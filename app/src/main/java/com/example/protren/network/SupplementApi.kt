@@ -22,10 +22,10 @@ interface SupplementApi {
     @GET("api/supplements/today")
     suspend fun getToday(): Response<List<Supplement>>
 
-    @POST("api/supplements/take/{id}")
+    @POST("api/supplements/{id}/take")
     suspend fun take(@Path("id") id: String): Response<Unit>
 
-    @POST("api/supplements/undo/{id}")
+    @DELETE("api/supplements/{id}/take")
     suspend fun undoTake(@Path("id") id: String): Response<Unit>
 
     @GET("api/supplements/catalog")

@@ -10,6 +10,7 @@ import com.example.protren.model.Trainer
 import com.example.protren.network.ApiClient
 import com.example.protren.network.TrainerApi
 import com.example.protren.network.TrainerUpsertRequest
+import com.example.protren.network.UserApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,146 +36,65 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         data class Error(val message: String) : State()
     }
 
+    // Funkcja pomocnicza do tworzenia API
+    private fun getApi(): TrainerApi {
+        val prefs = UserPreferences(getApplication())
+        return ApiClient.createWithAuth(
+            tokenProvider = { prefs.getAccessToken().orEmpty() },
+            refreshTokenProvider = { prefs.getRefreshToken().orEmpty() },
+            onTokensUpdated = { acc, ref -> prefs.setTokens(acc, ref) }
+        ).create(TrainerApi::class.java)
+    }
+
     fun load() {
         _state.value = State.Loading
 
         viewModelScope.launch {
             try {
-                val prefs = UserPreferences(getApplication())
-                val token = prefs.getAccessToken().orEmpty()
-
-                val api = ApiClient
-                    .createWithAuth(tokenProvider = { token })
-                    .create(TrainerApi::class.java)
-
+                val api = getApi()
                 val res = api.getMyOffer()
 
-                when {
-                    res.isSuccessful -> {
-                        val trainer = res.body()
-                        working = trainer?.toUi() ?: OfferUi()
-                        _state.value = State.Loaded(working)
-                    }
-
-                    res.code() == 400 || res.code() == 404 -> {
-                        working = OfferUi()
-                        _state.value = State.Loaded(working)
-                    }
-
-                    else -> {
-                        _state.value = State.Error("Błąd serwera: ${res.code()} ${res.message()}")
-                    }
+                if (res.isSuccessful) {
+                    val trainer = res.body()
+                    working = trainer?.toUi() ?: OfferUi()
+                    _state.value = State.Loaded(working)
+                } else if (res.code() == 400 || res.code() == 404) {
+                    working = OfferUi()
+                    _state.value = State.Loaded(working)
+                } else {
+                    _state.value = State.Error("Błąd serwera: ${res.code()}")
                 }
             } catch (e: Exception) {
                 _state.value = State.Error(e.localizedMessage ?: "Błąd sieci")
             }
         }
     }
+
     fun updateFrom(ui: OfferUi) {
         working = ui
         _state.value = State.Loaded(working)
     }
 
-
-    suspend fun uploadImages(
-        context: Context,
-        avatarUri: Uri?,
-        galleryUris: List<Uri>
-    ): Boolean {
-        if (avatarUri == null && galleryUris.isEmpty()) return true
-
-        return try {
-            val prefs = UserPreferences(getApplication())
-            val token = prefs.getAccessToken().orEmpty()
-
-            val api = ApiClient
-                .createWithAuth(tokenProvider = { token })
-                .create(TrainerApi::class.java)
-
-            var newAvatarUrl: String? = working.avatarUrl
-            val newGalleryUrls = (working.galleryUrls ?: emptyList()).toMutableList()
-
-            if (avatarUri != null) {
-                val avatarPart = createImagePart(
-                    context = context,
-                    uri = avatarUri,
-                    partName = "avatar",
-                    fileName = "trainer_avatar.jpg"
-                )
-
-                if (avatarPart != null) {
-                    val res = api.uploadTrainerAvatar(avatarPart)
-                    if (res.isSuccessful) {
-                        val body = res.body()
-                        if (!body?.url.isNullOrBlank()) {
-                            newAvatarUrl = body!!.url
-                        }
-                    } else {
-                        _state.value = State.Error(
-                            "Nie udało się wysłać avatara: ${res.code()} ${res.message()}"
-                        )
-                        return false
-                    }
-                }
-            }
-
-            if (galleryUris.isNotEmpty()) {
-                val parts = mutableListOf<MultipartBody.Part>()
-                galleryUris.forEachIndexed { index, uri ->
-                    val part = createImagePart(
-                        context = context,
-                        uri = uri,
-                        partName = "images",
-                        fileName = "portfolio_$index.jpg"
-                    )
-                    if (part != null) parts.add(part)
-                }
-
-                if (parts.isNotEmpty()) {
-                    val res = api.uploadTrainerGallery(parts)
-                    if (res.isSuccessful) {
-                        val body = res.body()
-                        val urls = body?.urls.orEmpty()
-                        if (urls.isNotEmpty()) {
-                            newGalleryUrls.clear()
-                            newGalleryUrls.addAll(urls)
-                        }
-                    } else {
-                        _state.value = State.Error(
-                            "Nie udało się wysłać zdjęć portfolio: ${res.code()} ${res.message()}"
-                        )
-                        return false
-                    }
-                }
-            }
-
-            working = working.copy(
-                avatarUrl = newAvatarUrl,
-                galleryUrls = if (newGalleryUrls.isEmpty()) null else newGalleryUrls
-            )
-            _state.value = State.Loaded(working)
-
-            pendingAvatarUri = null
-            pendingGalleryUris = emptyList()
-
-            true
-        } catch (e: Exception) {
-            _state.value = State.Error(e.localizedMessage ?: "Błąd przy uploadzie zdjęć")
-            false
-        }
-    }
-
     suspend fun save(): Boolean {
         return try {
-            val prefs = UserPreferences(getApplication())
-            val token = prefs.getAccessToken().orEmpty()
+            val api = getApi()
+            val userApi = ApiClient.createWithAuth(
+                tokenProvider = { UserPreferences(getApplication()).getAccessToken().orEmpty() }
+            ).create(UserApi::class.java)
 
-            val api = ApiClient
-                .createWithAuth(tokenProvider = { token })
-                .create(TrainerApi::class.java)
+            val fullName = working.name.orEmpty().trim()
+            val parts = fullName.split(" ", limit = 2)
+            val fName = parts.getOrNull(0) ?: ""
+            val lName = parts.getOrNull(1) ?: ""
+
+            val userUpdateMap = mapOf(
+                "firstName" to fName,
+                "lastName" to lName
+            )
+            userApi.updateMe(userUpdateMap)
 
             val dto = TrainerUpsertRequest(
-                name = working.name.orEmpty(),
+                name = fullName,
                 email = working.email.orEmpty(),
                 bio = working.bio.orEmpty(),
                 specialties = working.specialties,
@@ -182,63 +102,61 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
                 avatarUrl = working.avatarUrl,
                 galleryUrls = working.galleryUrls
             )
-
             val res = api.upsertMyOffer(dto)
 
             if (res.isSuccessful) {
                 val trainer = res.body()
                 working = trainer?.toUi() ?: working
-                pendingAvatarUri = null
-                pendingGalleryUris = emptyList()
                 _state.value = State.Loaded(working)
                 true
             } else {
-                _state.value = State.Error("Nie udało się zapisać: ${res.code()} ${res.message()}")
                 false
             }
         } catch (e: Exception) {
-            _state.value = State.Error(e.localizedMessage ?: "Błąd sieci przy zapisie")
             false
         }
     }
 
-    fun onAvatarSelected(context: Context, uri: Uri?) {
-        pendingAvatarUri = uri
+    suspend fun uploadImages(context: Context, avatarUri: Uri?, galleryUris: List<Uri>): Boolean {
+        if (avatarUri == null && galleryUris.isEmpty()) return true
+        return try {
+            val api = getApi()
+            var newAvatarUrl: String? = working.avatarUrl
+            val newGalleryUrls = (working.galleryUrls ?: emptyList()).toMutableList()
+
+            if (avatarUri != null) {
+                val part = createImagePart(context, avatarUri, "avatar", "avatar.jpg")
+                if (part != null) {
+                    val res = api.uploadTrainerAvatar(part)
+                    if (res.isSuccessful) newAvatarUrl = res.body()?.url
+                }
+            }
+
+            if (galleryUris.isNotEmpty()) {
+                val parts = galleryUris.mapIndexedNotNull { i, uri ->
+                    createImagePart(context, uri, "images", "img_$i.jpg")
+                }
+                val res = api.uploadTrainerGallery(parts)
+                if (res.isSuccessful) {
+                    newGalleryUrls.clear()
+                    newGalleryUrls.addAll(res.body()?.urls.orEmpty())
+                }
+            }
+
+            working = working.copy(avatarUrl = newAvatarUrl, galleryUrls = newGalleryUrls)
+            true
+        } catch (e: Exception) { false }
     }
 
-    fun onAvatarCleared() {
-        pendingAvatarUri = null
-        working = working.copy(avatarUrl = null)
-        _state.value = State.Loaded(working)
-    }
-
-    fun onGalleryAdded(context: Context, uris: List<Uri>) {
-        pendingGalleryUris = uris
-    }
-
-    fun onGalleryRemoved(index: Int) {
-        if (index in pendingGalleryUris.indices) {
-            pendingGalleryUris = pendingGalleryUris.toMutableList().also { it.removeAt(index) }
-        }
-
-        val currentUrls = working.galleryUrls?.toMutableList() ?: mutableListOf()
-        if (index in currentUrls.indices) {
-            currentUrls.removeAt(index)
-            working = working.copy(
-                galleryUrls = if (currentUrls.isEmpty()) null else currentUrls
-            )
-            _state.value = State.Loaded(working)
-        }
-    }
 
     private fun Trainer.toUi() = OfferUi(
         name = name,
         email = email,
         bio = bio,
-        specialties = this.specialties ?: emptyList(),
-        priceMonth = this.priceMonth,
-        avatarUrl = this.avatarUrl,
-        galleryUrls = try { this.galleryUrls } catch (_: Throwable) { null }
+        specialties = specialties ?: emptyList(),
+        priceMonth = priceMonth,
+        avatarUrl = avatarUrl,
+        galleryUrls = galleryUrls
     )
 
     data class OfferUi(
@@ -251,27 +169,26 @@ class TrainerOfferViewModel(app: Application) : AndroidViewModel(app) {
         val galleryUrls: List<String>? = null
     )
 
-    data class FileUploadResponse(
-        val url: String
-    )
+    fun onAvatarSelected(context: Context, uri: Uri?) { pendingAvatarUri = uri }
+    fun onAvatarCleared() {
+        working = working.copy(avatarUrl = null)
+        _state.value = State.Loaded(working)
+    }
+    fun onGalleryAdded(context: Context, uris: List<Uri>) { pendingGalleryUris = uris }
+    fun onGalleryRemoved(index: Int) {
+        val current = working.galleryUrls?.toMutableList() ?: mutableListOf()
+        if (index in current.indices) {
+            current.removeAt(index)
+            working = working.copy(galleryUrls = if (current.isEmpty()) null else current)
+            _state.value = State.Loaded(working)
+        }
+    }
 
-    data class GalleryUploadResponse(
-        val urls: List<String> = emptyList()
-    )
-
-    private suspend fun createImagePart(
-        context: Context,
-        uri: Uri,
-        partName: String,
-        fileName: String
-    ): MultipartBody.Part? = withContext(Dispatchers.IO) {
-        val cr = context.contentResolver
-        val input = cr.openInputStream(uri) ?: return@withContext null
-        val bytes = input.use { it.readBytes() }
-
-        val mimeType = cr.getType(uri) ?: "image/*"
-        val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-
-        MultipartBody.Part.createFormData(partName, fileName, requestBody)
+    private suspend fun createImagePart(context: Context, uri: Uri, partName: String, fileName: String): MultipartBody.Part? = withContext(Dispatchers.IO) {
+        try {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext null
+            val requestBody = bytes.toRequestBody((context.contentResolver.getType(uri) ?: "image/*").toMediaTypeOrNull())
+            MultipartBody.Part.createFormData(partName, fileName, requestBody)
+        } catch (e: Exception) { null }
     }
 }

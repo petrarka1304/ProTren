@@ -4,10 +4,6 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import java.util.concurrent.atomic.AtomicReference
 
-/**
- * Interceptor dodający Authorization: Bearer <token> bez blokowania wątków.
- * Token jest przechowywany w pamięci w companion object i aktualizowany po logowaniu.
- */
 class TokenInterceptor : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -35,13 +31,8 @@ class TokenInterceptor : Interceptor {
     }
 
     companion object {
-        // globalny, thread-safe token w pamięci
         private val tokenRef = AtomicReference<String?>()
-
-        /** Pobiera aktualny ACCESS token (czysty JWT, bez Bearer). */
         fun currentToken(): String? = tokenRef.get()
-
-        /** Ustawia lub aktualizuje ACCESS token. */
         fun updateToken(token: String?) {
             tokenRef.set(token?.removePrefix("Bearer ")
                 ?.removePrefix("bearer ")
@@ -49,7 +40,6 @@ class TokenInterceptor : Interceptor {
                 ?.ifBlank { null })
         }
 
-        /** Czyści token z pamięci. */
         fun clearToken() = tokenRef.set(null)
     }
 }

@@ -7,7 +7,6 @@ import org.junit.Test
 
 class PlanUtilsTest {
 
-    // Helper do szybkiego tworzenia planu
     private fun createPlan(vararg dayTitles: String): TrainingPlan {
         val days = dayTitles.map { TrainingPlanDay(title = it) }
         return TrainingPlan(id = "1", name = "Test", days = days)

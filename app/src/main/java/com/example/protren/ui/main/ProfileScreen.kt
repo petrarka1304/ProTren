@@ -32,6 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -57,7 +61,19 @@ fun ProfileScreen(
 
     val accountVm: AccountViewModel = viewModel(factory = AccountViewModelFactory(app))
     val accountState by accountVm.state.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                accountVm.loadMe()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
 
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     val state by vm.state.collectAsState()
     val uploadedAvatar by avatarVm.avatarUrl.collectAsState()
     val uploadLoading by avatarVm.loading.collectAsState()
@@ -110,7 +126,6 @@ fun ProfileScreen(
         }
     }
 
-    // picker zdjęcia
     val pickImage = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->

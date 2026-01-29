@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.protren.data.UserPreferences
 import com.example.protren.network.ExerciseRequest
 import com.example.protren.network.TrainingPlanApi
+import com.example.protren.network.TrainingPlanDayCreateDto
 import com.example.protren.network.TrainingPlanDayDto
 import com.example.protren.network.TrainingPlanDto
 import com.example.protren.network.TrainingPlanUpdateRequest
@@ -207,16 +208,20 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
 
-                val dayDtos: List<TrainingPlanDayDto> = current.days.map { dayUi ->
+                val dayDtos: List<TrainingPlanDayCreateDto> = current.days.map { dayUi ->
                     val exercises: List<ExerciseRequest> =
                         if (dayUi.exercises.isNotEmpty()) {
                             dayUi.exercises.map { ex ->
+                                val safeName = ex.name.trim().ifBlank { "Ćwiczenie" }
+                                val safeSets = ex.sets.coerceAtLeast(1)
+                                val safeReps = ex.reps.coerceAtLeast(1)
+
                                 ExerciseRequest(
-                                    name = ex.name,
+                                    name = safeName,
                                     muscleGroup = "Ogólne",
-                                    sets = ex.sets,
-                                    repsMin = ex.reps,
-                                    repsMax = ex.reps,
+                                    sets = safeSets,
+                                    repsMin = safeReps,
+                                    repsMax = safeReps,
                                     rir = 2,
                                     pattern = "straight"
                                 )
@@ -225,8 +230,8 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
                             emptyList()
                         }
 
-                    TrainingPlanDayDto(
-                        title = dayUi.title,
+                    TrainingPlanDayCreateDto(
+                        title = dayUi.title.trim().ifBlank { "Dzień" },
                         exercises = exercises
                     )
                 }
@@ -236,6 +241,7 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
                     days = dayDtos,
                     isPublic = current.isPublic
                 )
+
 
                 val res = api.updatePlan(current.id, body)
                 if (res.isSuccessful) {

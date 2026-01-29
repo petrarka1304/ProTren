@@ -54,10 +54,10 @@ class ExerciseRepositoryTest {
             ExerciseDto(_id = "2", name = "Przysiad")
         )
         val page2 = listOf(
-            ExerciseDto(_id = "3", name = "pompki"),   // duplikat różniący się wielkością liter
+            ExerciseDto(_id = "3", name = "pompki"),
             ExerciseDto(_id = "4", name = "Martwy ciąg")
         )
-        val page3 = emptyList<ExerciseDto>() // warunek końca (items.size < limit)
+        val page3 = emptyList<ExerciseDto>()
 
         val api = FakeExerciseApi(pages = listOf(page1, page2, page3))
         val repo = ExerciseRepository(api)
