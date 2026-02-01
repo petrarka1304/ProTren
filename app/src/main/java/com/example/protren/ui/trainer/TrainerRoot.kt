@@ -21,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.protren.data.UserPreferences
+import com.example.protren.network.ApiClient
 import com.example.protren.network.TrainerPlanApi
 import com.example.protren.ui.exercises.ExercisePickerScreen
 import com.example.protren.ui.main.SettingsScreen
@@ -163,7 +164,7 @@ private fun rememberTrainerPlanApi(prefs: UserPreferences): TrainerPlanApi {
 
     val retrofit = remember(client) {
         Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/")
+            .baseUrl(ApiClient.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()

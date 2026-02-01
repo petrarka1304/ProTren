@@ -72,6 +72,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.protren.data.UserPreferences
+import com.example.protren.network.ApiClient
 import com.example.protren.network.ChatAttachmentDto
 import com.example.protren.network.ChatMessageDto
 import com.example.protren.network.ReplyRef
@@ -81,7 +82,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private const val CHAT_MEDIA_BASE_URL = "https://protren-backend.onrender.com"
+private const val CHAT_MEDIA_BASE_URL = ApiClient.BASE_URL
 
 
 private fun normalizeMediaUrl(raw: String?): String? {

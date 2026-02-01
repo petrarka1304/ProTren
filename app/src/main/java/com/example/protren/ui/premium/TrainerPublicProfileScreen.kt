@@ -36,11 +36,12 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.protren.model.Trainer
 import com.example.protren.model.Review
+import com.example.protren.network.ApiClient
 import com.example.protren.viewmodel.TrainerProfileState
 import com.example.protren.viewmodel.TrainerProfileViewModel
 import com.example.protren.viewmodel.ReviewViewModel
 
-private const val BACKEND_BASE_URL = "https://protren-backend.onrender.com/"
+private const val BACKEND_BASE_URL = ApiClient.BASE_URL
 
 @Composable
 fun TrainerPublicProfileScreen(

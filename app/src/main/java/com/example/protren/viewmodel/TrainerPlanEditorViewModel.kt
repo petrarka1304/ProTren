@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.protren.data.UserPreferences
+import com.example.protren.network.ApiClient
 import com.example.protren.network.ExerciseRequest
 import com.example.protren.network.TrainingPlanApi
 import com.example.protren.network.TrainingPlanDayCreateDto
@@ -65,7 +66,7 @@ class TrainerPlanEditorViewModel(app: Application) : AndroidViewModel(app) {
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/")
+            .baseUrl(ApiClient.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()

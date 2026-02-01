@@ -27,6 +27,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.protren.data.UserPreferences
+import com.example.protren.network.ApiClient
 import com.example.protren.network.TraineeProfileResponse
 import com.example.protren.network.UserProfileApi
 import kotlinx.coroutines.launch
@@ -64,7 +65,7 @@ fun TraineeProfileScreen(
             .build()
 
         Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/")
+            .baseUrl(ApiClient.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()

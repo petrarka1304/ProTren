@@ -50,6 +50,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.protren.data.UserPreferences
 import com.example.protren.model.UserProfile
+import com.example.protren.network.ApiClient
 import com.example.protren.viewmodel.TrainerProfileState
 import com.example.protren.viewmodel.TrainerProfileViewModel
 import kotlinx.coroutines.launch
@@ -73,7 +74,7 @@ private val CARD_RADIUS = 20.dp
 private val CARD_INNER_PAD = 14.dp
 private val TILE_RADIUS = 14.dp
 
-private const val MEDIA_BASE_URL = "https://protren-backend.onrender.com"
+private const val MEDIA_BASE_URL = ApiClient.BASE_URL
 private fun normalizeUrl(raw: String?): String? {
     val v = raw?.trim()
     if (v.isNullOrBlank()) return null
@@ -125,7 +126,7 @@ private fun rememberProfileUploadApi(prefs: UserPreferences): ProfileUploadApi {
     }
     val retrofit = remember {
         Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/")
+            .baseUrl(ApiClient.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)
             .build()

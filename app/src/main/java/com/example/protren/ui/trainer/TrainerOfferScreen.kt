@@ -52,8 +52,9 @@ import coil.request.ImageRequest
 import com.example.protren.viewmodel.TrainerOfferViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ColumnScope
+import com.example.protren.network.ApiClient
 
-private const val IMAGE_BASE_URL = "https://protren-backend.onrender.com/"
+private const val IMAGE_BASE_URL = ApiClient.BASE_URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

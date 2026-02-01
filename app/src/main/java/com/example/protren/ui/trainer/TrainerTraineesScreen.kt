@@ -48,7 +48,7 @@ import com.example.protren.viewmodel.TrainerPanelViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-private const val MEDIA_BASE_URL = "https://protren-backend.onrender.com"
+private const val MEDIA_BASE_URL = ApiClient.BASE_URL
 private fun normalizeUrl(raw: String?): String? {
     val v = raw?.trim()
     if (v.isNullOrBlank()) return null

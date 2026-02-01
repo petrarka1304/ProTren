@@ -37,7 +37,7 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun plansApi(): TrainingPlanApi =
         Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/")
+            .baseUrl(ApiClient.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(authClient())
             .build()
@@ -45,7 +45,7 @@ class TrainerPlansViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun trainerApi(): TrainerAdminApi =
         Retrofit.Builder()
-            .baseUrl("https://protren-backend.onrender.com/")
+            .baseUrl(ApiClient.BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(authClient())
             .build()

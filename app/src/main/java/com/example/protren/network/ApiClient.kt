@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 object ApiClient {
-    private const val BASE_URL = "https://protren-backend.onrender.com/"
+    const val BASE_URL = "https://protren-backend.onrender.com/"
     private const val REFRESH_TIMEOUT_MS = 3000L
 
     private val globalErrorInterceptor = Interceptor { chain ->
